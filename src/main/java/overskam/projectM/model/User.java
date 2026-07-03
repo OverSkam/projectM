@@ -20,8 +20,8 @@ public class User extends AbstractModel {
     private String password;
 
     @Column(name = "token_version", nullable = false)
-    private Long tokenVersion = 15L;
+    private Long tokenVersion = 0L;
 
     @Column(name = "enabled", nullable = false)
-    private Boolean enabled = false;
+    private Boolean enabled = true;
 }
