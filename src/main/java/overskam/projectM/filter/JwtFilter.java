@@ -13,16 +13,18 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import overskam.projectM.service.CustomUserDetailsService;
+import overskam.projectM.service.TokenVersionService;
 import overskam.projectM.util.JwtUtil;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Component
 @AllArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailsService;
-//    private final TokenVersionService tokenVersionService;
+    private final TokenVersionService tokenVersionService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
@@ -37,16 +39,14 @@ public class JwtFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                Long userId = jwtUtil.extractUserId(jwt);
+                UUID userId = jwtUtil.extractUserId(jwt);
                 Long tokenVersion = jwtUtil.extractVersion(jwt);
                 if (userId == null || tokenVersion == null) {
                     writeUnauthorized(response, "Invalid or expired token");
                     return;
                 }
 
-//                TODO: token version
-//                long currentVersion = tokenVersionService.getCurrentVersion(userId);
-                long currentVersion = 0;
+                long currentVersion = tokenVersionService.getCurrentVersion(userId);
                 if (tokenVersion != currentVersion) {
                     writeUnauthorized(response, "Token revoked");
                     return;

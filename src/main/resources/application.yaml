@@ -8,6 +8,12 @@ spring:
     password: 1
     driver-class-name: org.postgresql.Driver
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+
   jpa:
     hibernate:
       ddl-auto: validate

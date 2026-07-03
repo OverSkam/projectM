@@ -2,16 +2,14 @@ package overskam.projectM.controller;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import overskam.projectM.dto.ApiResponse;
 import overskam.projectM.dto.LoginRequest;
 import overskam.projectM.dto.LoginResponse;
@@ -57,5 +55,13 @@ public class AuthController {
         log.info("Registering user...");
         authService.register(registerRequest);
         return ResponseEntity.ok(new ApiResponse<>("User has been registered", null));
+    }
+    
+    @GetMapping("/verify")
+    public ResponseEntity<?> verify(@RequestParam String token) {
+        log.info("Trying to verify user's email...");
+        authService.verify(token);
+        
+        return ResponseEntity.ok(new ApiResponse<>("User has been verified", null));
     }
 }

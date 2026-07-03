@@ -39,9 +39,9 @@ public class JwtUtil {
         return extractAllClaims(token).getSubject();
     }
 
-    public Long extractUserId(String token) {
+    public UUID extractUserId(String token) {
         Object uid = extractAllClaims(token).get("uid");
-        return uid == null ? null : ((Number) uid).longValue();
+        return uid == null ? null : (UUID) uid;
     }
 
     public Long extractVersion(String token) {
