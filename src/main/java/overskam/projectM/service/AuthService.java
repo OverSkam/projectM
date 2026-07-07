@@ -42,7 +42,6 @@ public class AuthService {
         log.info("User with id: {} was registered", user.getId());
 
         VerificationToken token = createNewTokenForUser(user, TokenType.EMAIL_VERIFICATION);
-        tokenRepository.save(token);
 
         emailService.sendVerificationEmail(user.getEmail(), token.getToken());
     }
@@ -108,8 +107,7 @@ public class AuthService {
         currentToken.setTokenExpiresAt(LocalDateTime.now().plusMinutes(30));
         currentToken.setUser(user);
         currentToken.setType(type);
-        tokenRepository.save(currentToken);
-        return currentToken;
+        return tokenRepository.save(currentToken);
     }
 
 }

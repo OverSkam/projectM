@@ -88,7 +88,7 @@ public class AuthController {
     }
     
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest passwordResetRequest) {
+    public ResponseEntity<?> resetPassword(@RequestBody @Validated PasswordResetRequest passwordResetRequest) {
         log.info("User is trying to verify password reset");
         authService.resetPassword(passwordResetRequest);
         
