@@ -109,7 +109,6 @@ public class AuthService {
         currentToken.setUser(user);
         currentToken.setType(type);
         tokenRepository.save(currentToken);
-        emailService.sendVerificationEmail(user.getEmail(), currentToken.getToken());
         return currentToken;
     }
 
