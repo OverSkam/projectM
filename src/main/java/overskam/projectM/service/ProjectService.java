@@ -3,6 +3,9 @@ package overskam.projectM.service;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.plummy.visualcore.tools.MapDifferenceExtractor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import overskam.projectM.dto.*;
@@ -11,6 +14,7 @@ import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.model.Project;
 import overskam.projectM.model.User;
 import overskam.projectM.repository.mongo.ProjectRepository;
+import overskam.projectM.util.SortingUtil;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -21,9 +25,12 @@ import java.util.function.Consumer;
 public class ProjectService {
     private final ProjectRepository projectRepository;
     
-    public List<ProjectNameResponse> getProjectsList(User user) {
+    public Page<ProjectNameResponse> getProjectsList(
+            User user, int page, int size, String sortBy, String sortDirection) {
+        Sort sort = SortingUtil.sortGenerator(sortBy, sortDirection);
         log.info("Fetch of projects list for user with id: {} was successful", user.getId());
-        return projectRepository.findByOwnerId(user.getId());
+        return projectRepository.findByOwnerId(user.getId(), PageRequest.of(page, size, sort))
+                .map(project -> new ProjectNameResponse(project.getId(), project.getName()));
     }
     
     public ProjectResponse getProject(User user, String projectId) {

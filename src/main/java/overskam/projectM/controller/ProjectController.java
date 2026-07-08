@@ -21,13 +21,19 @@ public class ProjectController {
     private final ProjectService projectService;
     
     @GetMapping
-    public ResponseEntity<?> getProjectsList(@AuthenticationPrincipal CustomUserDetails principal) {
+    public ResponseEntity<?> getProjectsList(
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection
+    ) {
         User user = principal.getUser();
         log.info("User is trying to get his projects list...");
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Projects list was fetched successfully",
-                        projectService.getProjectsList(user)
+                        projectService.getProjectsList(user, page, size, sortBy, sortDirection)
                 )
         );
     }
