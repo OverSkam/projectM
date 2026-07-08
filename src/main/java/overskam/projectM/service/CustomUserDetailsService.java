@@ -8,7 +8,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
-import overskam.projectM.repository.UserRepository;
+import overskam.projectM.repository.jpa.UserRepository;
 
 @Slf4j
 @Service

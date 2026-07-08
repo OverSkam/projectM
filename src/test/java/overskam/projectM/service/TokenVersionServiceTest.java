@@ -6,7 +6,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.model.User;
-import overskam.projectM.repository.UserRepository;
+import overskam.projectM.repository.jpa.UserRepository;
 
 import java.util.Optional;
 import java.util.UUID;

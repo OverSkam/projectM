@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
-import overskam.projectM.repository.UserRepository;
+import overskam.projectM.repository.jpa.UserRepository;
 
 import java.util.Optional;
 

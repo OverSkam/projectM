@@ -14,8 +14,8 @@ import overskam.projectM.enums.TokenType;
 import overskam.projectM.exception.InvalidRequestException;
 import overskam.projectM.model.User;
 import overskam.projectM.model.VerificationToken;
-import overskam.projectM.repository.UserRepository;
-import overskam.projectM.repository.VerificationTokenRepository;
+import overskam.projectM.repository.jpa.UserRepository;
+import overskam.projectM.repository.jpa.VerificationTokenRepository;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.model.User;
-import overskam.projectM.repository.UserRepository;
+import overskam.projectM.repository.jpa.UserRepository;
 
 import java.time.Duration;
 import java.util.UUID;

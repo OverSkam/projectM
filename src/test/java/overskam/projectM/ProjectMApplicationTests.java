@@ -8,8 +8,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import overskam.projectM.repository.UserRepository;
-import overskam.projectM.repository.VerificationTokenRepository;
+import overskam.projectM.repository.jpa.UserRepository;
+import overskam.projectM.repository.jpa.VerificationTokenRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

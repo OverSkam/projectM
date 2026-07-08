@@ -32,9 +32,24 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://projectm:projectm@localhost:27017/projectm?authSource=admin}
+    uuid-representation: standard
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:projectm}
+    password: ${RABBITMQ_PASSWORD:projectm}
 
 app:
   mail:
     from: ${APP_MAIL_FROM:no-reply@projectm.local}
     verification-url: ${APP_VERIFICATION_URL:http://localhost:8080/api/v1/auth/verify}
     password-reset-url: ${APP_VERIFICATION_URL:http://localhost:8080/api/v1/auth/reset-password}
+  storage:
+    bucket: ${S3_BUCKET:projectm-artifacts}
+    region: ${S3_REGION:us-east-1}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:projectm}
+    secret-key: ${S3_SECRET_KEY:projectm123}
