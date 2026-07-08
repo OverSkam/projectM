@@ -2,11 +2,10 @@ package overskam.projectM.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import overskam.projectM.config.RabbitMqConfig;
-import overskam.projectM.dto.BuildRequestMessage;
+import overskam.projectM.dto.CompileTaskMessage;
 
 @Slf4j
 @Service
@@ -14,9 +13,10 @@ import overskam.projectM.dto.BuildRequestMessage;
 public class BuildQueuePublisher {
     private final RabbitTemplate rabbitTemplate;
     
-    public void publish(BuildRequestMessage message) {
+    public void publish(CompileTaskMessage message) {
         rabbitTemplate.convertAndSend(
-                RabbitMqConfig.BUILD_REQUEST_QUEUE,
+                RabbitMqConfig.COMPILE_EXCHANGE,
+                RabbitMqConfig.COMPILE_REQUEST_ROUTING_KEY,
                 message
         );
     }

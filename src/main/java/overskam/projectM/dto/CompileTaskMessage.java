@@ -2,9 +2,10 @@ package overskam.projectM.dto;
 
 import java.util.UUID;
 
-public record BuildRequestMessage (
+public record CompileTaskMessage(
         UUID buildId,
         String projectId,
-        UUID ownerId
+        UUID ownerId,
+        String replyTo
 ) {
 }

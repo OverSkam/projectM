@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-plugin-builds
+      author: overskam
+      changes:
+        - createTable:
+            tableName: plugin_builds
+            columns:
+              # Fields inherited from AbstractModel
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: create_date
+                  type: datetime
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_modified_date
+                  type: datetime
+
+              # Fields from PluginBuild
+              - column:
+                  name: project_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: owner_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: QUEUED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: artifact_key
+                  type: varchar(255)
+              - column:
+                  name: error_message
+                  type: varchar(2000)
