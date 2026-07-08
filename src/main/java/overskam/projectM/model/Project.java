@@ -1,6 +1,6 @@
 package overskam.projectM.model;
 
-import jakarta.persistence.Id;
+import org.springframework.data.annotation.Id;
 import lombok.Data;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -12,13 +12,13 @@ import java.util.UUID;
 
 @Data
 @Document(collection = "projects")
-public class ProjectDocument {
+public class Project {
     @Id
     private String id;
     
     private UUID ownerId;
     private String name;
-    private Map<String, Object> json;
+    private Map<String, Object> projectData;
     
     @CreatedDate
     private LocalDateTime createdAt;
