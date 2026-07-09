@@ -3,7 +3,7 @@ package overskam.projectM.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import overskam.projectM.exception.BuildStatus;
+import overskam.projectM.enums.BuildStatus;
 
 import java.util.UUID;
 

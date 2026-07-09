@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changeset/001-create-users.yaml
   - include:
       file: db/changelog/changeset/002-create-verification-token.yaml
+  - include:
+      file: db/changelog/changeset/003-create-plugin-builds.yaml

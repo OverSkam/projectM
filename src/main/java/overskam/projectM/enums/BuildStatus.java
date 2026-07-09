@@ -1,4 +1,4 @@
-package overskam.projectM.exception;
+package overskam.projectM.enums;
 
 public enum BuildStatus {
     QUEUED,
