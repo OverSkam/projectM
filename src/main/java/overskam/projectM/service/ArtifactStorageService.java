@@ -7,6 +7,8 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class ArtifactStorageService {
@@ -15,7 +17,7 @@ public class ArtifactStorageService {
     @Value("${app.storage.bucket}")
     private String bucket;
     
-    public String saveJar(String buildId, byte[] jarBytes) {
+    public String saveJar(UUID buildId, byte[] jarBytes) {
         String key = "builds/" + buildId + "/plugin.jar";
         
         s3Client.putObject(

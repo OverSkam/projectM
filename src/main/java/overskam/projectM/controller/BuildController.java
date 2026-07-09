@@ -8,8 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import overskam.projectM.dto.ApiResponse;
 import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
-import overskam.projectM.service.BuildService;
-import overskam.projectM.service.ProjectService;
+import overskam.projectM.service.PluginBuildService;
 
 import java.util.Map;
 import java.util.UUID;
@@ -19,7 +18,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/projects")
 @AllArgsConstructor
 public class BuildController {
-    private final BuildService buildService;
+    private final PluginBuildService pluginBuildService;
     
     @GetMapping("/{projectId}/builds")
     public ResponseEntity<?> getBuilds(
@@ -36,7 +35,7 @@ public class BuildController {
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Project builds was fetched successfully",
-                        buildService.getBuilds(user, projectId, page, size, sortBy, sortDirection)
+                        pluginBuildService.getBuilds(user, projectId, page, size, sortBy, sortDirection)
                 )
         );
     }
@@ -53,7 +52,7 @@ public class BuildController {
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Build was fetched successfully",
-                        buildService.getBuild(user, projectId, buildId)
+                        pluginBuildService.getBuild(user, projectId, buildId)
                 )
         );
     }
@@ -69,7 +68,24 @@ public class BuildController {
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Compile task was queued",
-                        Map.of("buildId", buildService.buildProject(user, projectId))
+                        Map.of("buildId", pluginBuildService.buildProject(user, projectId))
+                )
+        );
+    }
+    
+    @GetMapping("/{projectId}/builds/{buildId}/artifact")
+    public ResponseEntity<?> getArtifact(
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @PathVariable String projectId,
+            @PathVariable UUID buildId
+    ) {
+        User user = principal.getUser();
+        log.info("User is trying to get an artifact link from build with id: {}", buildId);
+        
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Artifact link was fetched successfully",
+                        pluginBuildService.getArtifact(user, projectId, buildId)
                 )
         );
     }

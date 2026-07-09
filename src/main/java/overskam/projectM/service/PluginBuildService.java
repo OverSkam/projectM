@@ -8,13 +8,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import overskam.projectM.config.RabbitMqConfig;
+import overskam.projectM.dto.ArtifactResponse;
 import overskam.projectM.dto.BuildResponse;
 import overskam.projectM.dto.CompileTaskMessage;
+import overskam.projectM.enums.BuildStatus;
 import overskam.projectM.exception.InvalidRequestException;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.model.PluginBuild;
-import overskam.projectM.model.Project;
 import overskam.projectM.model.User;
 import overskam.projectM.repository.jpa.PluginBuildRepository;
 import overskam.projectM.repository.mongo.ProjectRepository;
@@ -25,7 +26,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @AllArgsConstructor
-public class BuildService {
+public class PluginBuildService {
     private final BuildQueuePublisher buildQueuePublisher;
     private final ProjectRepository projectRepository;
     private final PluginBuildRepository buildRepository;
@@ -81,5 +82,42 @@ public class BuildService {
             throw new OwnershipException("User trying to access not his project");
         
         return build;
+    }
+    
+    @Transactional
+    public void markRunning(UUID buildId) {
+        PluginBuild build = buildRepository.findById(buildId)
+                .orElseThrow(() -> new NotFoundException("Build not found"));
+        build.setStatus(BuildStatus.RUNNING);
+        buildRepository.save(build);
+    }
+    
+    @Transactional
+    public void markSuccess(UUID buildId, String artifactKey) {
+        PluginBuild build = buildRepository.findById(buildId)
+                .orElseThrow(() -> new NotFoundException("Build not found"));
+        build.setStatus(BuildStatus.SUCCESS);
+        build.setArtifactKey(artifactKey);
+        buildRepository.save(build);
+    }
+    
+    @Transactional
+    public void markFailed(UUID buildId, String errorMessage) {
+        PluginBuild build = buildRepository.findById(buildId)
+                .orElseThrow(() -> new NotFoundException("Build not found"));
+        build.setStatus(BuildStatus.FAILED);
+        build.setErrorMessage(errorMessage);
+        buildRepository.save(build);
+    }
+    
+    public ArtifactResponse getArtifact(User user, String projectId, UUID buildId) {
+        PluginBuild build = buildRepository.findById(buildId)
+                .orElseThrow(() -> new NotFoundException("Build not found"));
+        if (!build.getProjectId().equals(projectId))
+            throw new InvalidRequestException("Invalid project id");
+        if (!build.getOwnerId().equals(user.getId()))
+            throw new OwnershipException("User doesn't have access to this build");
+        
+        return new ArtifactResponse(build.getArtifactKey());
     }
 }
