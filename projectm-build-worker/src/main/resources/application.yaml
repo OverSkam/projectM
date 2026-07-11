@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: projectm-build-worker
+
+  config:
+    import: "optional:file:.env[.properties]"
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres?currentSchema=public}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:1}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format-sql: true
+        default-schema: ${DB_SCHEMA:public}
+
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://projectm:projectm@localhost:27017/projectm?authSource=admin}
+    uuid-representation: standard
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:projectm}
+    password: ${RABBITMQ_PASSWORD:projectm}
+
+app:
+  storage:
+    bucket: ${S3_BUCKET:projectm-artifacts}
+    region: ${S3_REGION:us-east-1}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:projectm}
+    secret-key: ${S3_SECRET_KEY:projectm123}
+  compiler:
+    spigot-api-path: ${SPIGOT_API_PATH:projectm-build-worker/libs/spigot-api.jar}
+    visual-runtime-path: ${VISUAL_RUNTIME_PATH:projectm-build-worker/libs/visual-runtime.jar}
