@@ -8,11 +8,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import overskam.projectM.common.mq.RabbitMqNames;
-import overskam.projectM.config.RabbitMqConfig;
 import overskam.projectM.dto.ArtifactResponse;
 import overskam.projectM.dto.BuildResponse;
 import overskam.projectM.common.dto.CompileTaskMessage;
-import overskam.projectM.common.enums.BuildStatus;
 import overskam.projectM.exception.InvalidRequestException;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
@@ -83,32 +81,6 @@ public class PluginBuildService {
             throw new OwnershipException("User trying to access not his project");
         
         return build;
-    }
-    
-    @Transactional
-    public void markRunning(UUID buildId) {
-        PluginBuild build = buildRepository.findById(buildId)
-                .orElseThrow(() -> new NotFoundException("Build not found"));
-        build.setStatus(BuildStatus.RUNNING);
-        buildRepository.save(build);
-    }
-    
-    @Transactional
-    public void markSuccess(UUID buildId, String artifactKey) {
-        PluginBuild build = buildRepository.findById(buildId)
-                .orElseThrow(() -> new NotFoundException("Build not found"));
-        build.setStatus(BuildStatus.SUCCESS);
-        build.setArtifactKey(artifactKey);
-        buildRepository.save(build);
-    }
-    
-    @Transactional
-    public void markFailed(UUID buildId, String errorMessage) {
-        PluginBuild build = buildRepository.findById(buildId)
-                .orElseThrow(() -> new NotFoundException("Build not found"));
-        build.setStatus(BuildStatus.FAILED);
-        build.setErrorMessage(errorMessage);
-        buildRepository.save(build);
     }
     
     public ArtifactResponse getArtifact(User user, String projectId, UUID buildId) {
