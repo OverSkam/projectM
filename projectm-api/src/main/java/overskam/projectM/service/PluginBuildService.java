@@ -30,11 +30,11 @@ public class PluginBuildService {
     private final ProjectRepository projectRepository;
     private final PluginBuildRepository buildRepository;
     
-    public Page<BuildResponse> getBuilds(User user, String projectId, int page, int size, String sortBy, String sortDirection) {
+    public Page<BuildResponse> getBuilds(UUID userId, String projectId, int page, int size, String sortBy, String sortDirection) {
         Sort sort = SortingUtil.sortGenerator(sortBy, sortDirection);
         log.info("Builds for project with id: {} was fetched successfully", projectId);
         return buildRepository.findByProjectIdAndOwnerId(
-                        projectId, user.getId(), PageRequest.of(page, size, sort))
+                        projectId, userId, PageRequest.of(page, size, sort))
                 .map(build ->
                         new BuildResponse(
                                 build.getId(),
@@ -46,28 +46,39 @@ public class PluginBuildService {
                 );
     }
     
-    public BuildResponse getBuild(User user, String projectId, UUID buildId) {
-        PluginBuild build = fetchOrThrow(user.getId(), projectId, buildId);
+    public BuildResponse getBuild(UUID userId, String projectId, UUID buildId) {
+        PluginBuild build = fetchOrThrow(userId, projectId, buildId);
         log.info("Build with id: {} was fetched successfully", buildId);
         
         return new BuildResponse(build.getId(), build.getProjectId(), build.getStatus(), build.getArtifactKey(), build.getErrorMessage());
     }
     
     @Transactional
-    public UUID buildProject(User user, String projectId) {
-        if (!projectRepository.existsByIdAndOwnerId(projectId, user.getId()))
+    public UUID buildProject(UUID userId, String projectId) {
+        if (!projectRepository.existsByIdAndOwnerId(projectId, userId))
             throw new InvalidRequestException("Project doesn't exist or user doesn't have ownership");
         
         PluginBuild build = new PluginBuild();
         build.setProjectId(projectId);
-        build.setOwnerId(user.getId());
+        build.setOwnerId(userId);
         buildRepository.save(build);
         
         buildQueuePublisher.publish(new CompileTaskMessage(
-                build.getId(), projectId, user.getId(), RabbitMqNames.RPC_REPLY_QUEUE
+                build.getId(), projectId, userId, RabbitMqNames.RPC_REPLY_QUEUE
         ));
         log.info("Compile task was published successfully");
         return build.getId();
+    }
+    
+    public ArtifactResponse getArtifact(UUID userId, String projectId, UUID buildId) {
+        PluginBuild build = buildRepository.findById(buildId)
+                .orElseThrow(() -> new NotFoundException("Build not found"));
+        if (!build.getProjectId().equals(projectId))
+            throw new InvalidRequestException("Invalid project id");
+        if (!build.getOwnerId().equals(userId))
+            throw new OwnershipException("User doesn't have access to this build");
+        
+        return new ArtifactResponse(build.getArtifactKey());
     }
     
     private PluginBuild fetchOrThrow(UUID userId, String projectId, UUID buildId) {
@@ -81,16 +92,5 @@ public class PluginBuildService {
             throw new OwnershipException("User trying to access not his project");
         
         return build;
-    }
-    
-    public ArtifactResponse getArtifact(User user, String projectId, UUID buildId) {
-        PluginBuild build = buildRepository.findById(buildId)
-                .orElseThrow(() -> new NotFoundException("Build not found"));
-        if (!build.getProjectId().equals(projectId))
-            throw new InvalidRequestException("Invalid project id");
-        if (!build.getOwnerId().equals(user.getId()))
-            throw new OwnershipException("User doesn't have access to this build");
-        
-        return new ArtifactResponse(build.getArtifactKey());
     }
 }

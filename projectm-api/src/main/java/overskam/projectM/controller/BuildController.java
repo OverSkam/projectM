@@ -29,13 +29,12 @@ public class BuildController {
             @RequestParam(defaultValue = "status") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection
     ) {
-        User user = principal.getUser();
         log.info("User is trying to get all his builds");
         
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Project builds was fetched successfully",
-                        pluginBuildService.getBuilds(user, projectId, page, size, sortBy, sortDirection)
+                        pluginBuildService.getBuilds(principal.getUser().getId(), projectId, page, size, sortBy, sortDirection)
                 )
         );
     }
@@ -46,13 +45,12 @@ public class BuildController {
             @PathVariable String projectId,
             @PathVariable UUID buildId
     ) {
-        User user = principal.getUser();
         log.info("User is trying to get build with id: {}", buildId);
         
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Build was fetched successfully",
-                        pluginBuildService.getBuild(user, projectId, buildId)
+                        pluginBuildService.getBuild(principal.getUser().getId(), projectId, buildId)
                 )
         );
     }
@@ -62,13 +60,12 @@ public class BuildController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId
     ) {
-        User user = principal.getUser();
         log.info("User is trying to compile project with id: {}", projectId);
         
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Compile task was queued",
-                        Map.of("buildId", pluginBuildService.buildProject(user, projectId))
+                        Map.of("buildId", pluginBuildService.buildProject(principal.getUser().getId(), projectId))
                 )
         );
     }
@@ -79,13 +76,12 @@ public class BuildController {
             @PathVariable String projectId,
             @PathVariable UUID buildId
     ) {
-        User user = principal.getUser();
         log.info("User is trying to get an artifact link from build with id: {}", buildId);
         
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Artifact link was fetched successfully",
-                        pluginBuildService.getArtifact(user, projectId, buildId)
+                        pluginBuildService.getArtifact(principal.getUser().getId(), projectId, buildId)
                 )
         );
     }

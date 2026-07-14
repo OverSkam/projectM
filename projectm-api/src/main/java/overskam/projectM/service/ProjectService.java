@@ -12,7 +12,6 @@ import overskam.projectM.dto.*;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.model.Project;
-import overskam.projectM.model.User;
 import overskam.projectM.repository.mongo.ProjectRepository;
 import overskam.projectM.util.SortingUtil;
 
@@ -26,30 +25,28 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     
     public Page<ProjectNameResponse> getProjectsList(
-            User user, int page, int size, String sortBy, String sortDirection) {
+            UUID userId, int page, int size, String sortBy, String sortDirection) {
         Sort sort = SortingUtil.sortGenerator(sortBy, sortDirection);
-        log.info("Fetch of projects list for user with id: {} was successful", user.getId());
-        return projectRepository.findByOwnerId(user.getId(), PageRequest.of(page, size, sort))
+        log.info("Fetch of projects list for user with id: {} was successful", userId);
+        return projectRepository.findByOwnerId(userId, PageRequest.of(page, size, sort))
                 .map(project -> new ProjectNameResponse(project.getId(), project.getName()));
     }
     
-    public ProjectResponse getProject(User user, String projectId) {
-        Project project = fetchOrThrow(user.getId(), projectId);
+    public ProjectResponse getProject(UUID userId, String projectId) {
+        Project project = fetchOrThrow(userId, projectId);
         log.info("Project with id: {} was fetched successfully", projectId);
         return new ProjectResponse(project.getId(), project.getName(), project.getProjectData());
     }
     
-    @Transactional
-    public void deleteProject(User user, String projectId) {
-        Project project = fetchOrThrow(user.getId(), projectId);
+    public void deleteProject(UUID userId, String projectId) {
+        Project project = fetchOrThrow(userId, projectId);
         projectRepository.delete(project);
         log.info("Project with id: {} was deleted successfully", projectId);
     }
     
-    @Transactional
-    public Map<String, String> createProject(User user, String projectName) {
+    public Map<String, String> createProject(UUID userId, String projectName) {
         Project project = new Project();
-        project.setOwnerId(user.getId());
+        project.setOwnerId(userId);
         project.setName(projectName);
         
         Map<String, Object> defaultProjectData = new LinkedHashMap<>();
@@ -65,17 +62,15 @@ public class ProjectService {
         return Map.of("id", project.getId());
     }
     
-    @Transactional
-    public void updateProjectMetadata(User user, String projectId, ProjectMetadataRequest projectMetadataRequest) {
-        Project project = fetchOrThrow(user.getId(), projectId);
+    public void updateProjectMetadata(UUID userId, String projectId, ProjectMetadataRequest projectMetadataRequest) {
+        Project project = fetchOrThrow(userId, projectId);
         setIfNotNull(project::setName, projectMetadataRequest.name());
         projectRepository.save(project);
         log.info("Metadata of project with id: {} was update successfully", projectId);
     }
     
-    @Transactional
-    public void updateProjectData(User user, String projectId, List<SequencedMap<String, Object>> patch) {
-        Project project = fetchOrThrow(user.getId(), projectId);
+    public void updateProjectData(UUID userId, String projectId, List<SequencedMap<String, Object>> patch) {
+        Project project = fetchOrThrow(userId, projectId);
         SequencedMap<String, Object> oldData =
                 new LinkedHashMap<>(Optional.ofNullable(project.getProjectData()).orElseGet(LinkedHashMap::new));
         SequencedMap<String, Object> patchedData = MapDifferenceExtractor.restore(oldData, patch);
@@ -84,9 +79,8 @@ public class ProjectService {
         log.info("Project data of project with id: {} was updated successfully", projectId);
     }
     
-    @Transactional
-    public void replaceProjectData(User user, String projectId, ReplaceProjectDataRequest changeProjectDataRequest) {
-        Project project = fetchOrThrow(user.getId(), projectId);
+    public void replaceProjectData(UUID userId, String projectId, ReplaceProjectDataRequest changeProjectDataRequest) {
+        Project project = fetchOrThrow(userId, projectId);
         project.setProjectData(changeProjectDataRequest.projectData());
         projectRepository.save(project);
         log.info("Data of project with id: {} was update successfully", project);
@@ -97,7 +91,7 @@ public class ProjectService {
                 .orElseThrow(() -> new NotFoundException("Project not found"));
         
         if (!project.getOwnerId().equals(userId))
-            throw new OwnershipException("User trying to access not his project");
+            throw new OwnershipException("UUID trying to access not his project");
         
         return project;
     }

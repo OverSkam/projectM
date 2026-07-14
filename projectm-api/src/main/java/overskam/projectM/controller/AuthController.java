@@ -25,27 +25,18 @@ import overskam.projectM.validation.FullUpdate;
 @AllArgsConstructor
 public class AuthController {
     private final AuthService authService;
-    private final CustomUserDetailsService userDetailsService;
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
     private final TokenVersionService tokenVersionService;
     
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Validated LoginRequest loginRequest) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.email());
-        User user = ((CustomUserDetails) userDetails).getUser();
-        
         log.info("Logging in user...");
         
-        if (!user.getEnabled())
-            throw new DisabledException("Please verify your email");
-        
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(userDetails.getUsername(), loginRequest.password())
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "User logged in successfully",
+                        new LoginResponse(authService.login(loginRequest))
+                )
         );
-        String jwtToken = jwtUtil.generateToken(userDetails.getUsername(), user.getId(), user.getTokenVersion());
-        
-        return ResponseEntity.ok(new ApiResponse<>("User logged in successfully", new LoginResponse(jwtToken)));
     }
     
     @PostMapping("/register")

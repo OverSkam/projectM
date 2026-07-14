@@ -12,6 +12,7 @@ import overskam.projectM.service.ProjectService;
 
 import java.util.List;
 import java.util.SequencedMap;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -28,12 +29,12 @@ public class ProjectController {
             @RequestParam(defaultValue = "name") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection
     ) {
-        User user = principal.getUser();
-        log.info("User is trying to get his projects list...");
+        UUID userId = principal.getUser().getId();
+        log.info("User with id: {} is trying to get his projects list...", userId);
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Projects list was fetched successfully",
-                        projectService.getProjectsList(user, page, size, sortBy, sortDirection)
+                        projectService.getProjectsList(userId, page, size, sortBy, sortDirection)
                 )
         );
     }
@@ -43,12 +44,12 @@ public class ProjectController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId
     ) {
-        User user = principal.getUser();
-        log.info("User is trying to get his project with id: {}", projectId);
+        UUID userId = principal.getUser().getId();
+        log.info("User with id: {} is trying to get his project with id: {}", userId, projectId);
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Project was fetched successfully",
-                        projectService.getProject(user, projectId)
+                        projectService.getProject(userId, projectId)
                 )
         );
     }
@@ -58,12 +59,12 @@ public class ProjectController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @RequestBody ProjectCreationRequest projectCreationRequest
     ) {
-        User user = principal.getUser();
-        log.info("User is trying to create new project");
+        UUID userId = principal.getUser().getId();
+        log.info("User with id: {} is trying to create new project", userId);
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "New project was created successfully",
-                        projectService.createProject(user, projectCreationRequest.name())
+                        projectService.createProject(userId, projectCreationRequest.name())
                 )
         );
     }
@@ -74,9 +75,9 @@ public class ProjectController {
             @PathVariable String projectId,
             @RequestBody ProjectMetadataRequest projectMetadataRequest
     ) {
-        User user = principal.getUser();
-        log.info("User is trying to update metadata of project with id: {}", projectId);
-        projectService.updateProjectMetadata(user, projectId, projectMetadataRequest);
+        UUID userId = principal.getUser().getId();
+        log.info("User with id: {} is trying to update metadata of project with id: {}", userId, projectId);
+        projectService.updateProjectMetadata(userId, projectId, projectMetadataRequest);
         return ResponseEntity.ok(new ApiResponse<>("Projects metadata was updated successfully", null));
     }
     
@@ -86,9 +87,9 @@ public class ProjectController {
             @PathVariable String projectId,
             @RequestBody List<SequencedMap<String, Object>> patch
     ) {
-        User user = principal.getUser();
-        log.info("User is trying to update data of project with id: {}", projectId);
-        projectService.updateProjectData(user, projectId, patch);
+        UUID userId = principal.getUser().getId();
+        log.info("User with id: {} is trying to update data of project with id: {}", userId, projectId);
+        projectService.updateProjectData(userId, projectId, patch);
         return ResponseEntity.ok(new ApiResponse<>("Projects data was updated successfully", null));
     }
     
@@ -98,9 +99,9 @@ public class ProjectController {
             @PathVariable String projectId,
             @RequestBody ReplaceProjectDataRequest dataRequest
     ) {
-        User user = principal.getUser();
-        log.info("User is trying to replace project data of project with id: {}", projectId);
-        projectService.replaceProjectData(user, projectId, dataRequest);
+        UUID userId = principal.getUser().getId();
+        log.info("User with id: {} is trying to replace project data of project with id: {}", userId, projectId);
+        projectService.replaceProjectData(userId, projectId, dataRequest);
         return ResponseEntity.ok(new ApiResponse<>("Projects data was updated successfully", null));
     }
     
@@ -109,9 +110,9 @@ public class ProjectController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId
     ) {
-        User user = principal.getUser();
-        log.info("User is trying to delete his project with id: {}", projectId);
-        projectService.deleteProject(user, projectId);
+        UUID userId = principal.getUser().getId();
+        log.info("User with id: {} is trying to delete his project with id: {}", userId, projectId);
+        projectService.deleteProject(userId, projectId);
         return ResponseEntity.ok(new ApiResponse<>("Project was deleted successfully", null));
     }
 }
