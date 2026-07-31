@@ -16,6 +16,8 @@ import java.util.UUID;
 public class WorkerPluginBuildService {
     private final PluginBuildRepository buildRepository;
     
+    private static final int MAX_ERROR_LENGTH = 2000;
+    
     @Transactional
     public void markRunning(UUID buildId) {
         PluginBuild build = buildRepository.findById(buildId)
@@ -38,7 +40,12 @@ public class WorkerPluginBuildService {
         PluginBuild build = buildRepository.findById(buildId)
                 .orElseThrow(() -> new IllegalArgumentException("Build not found"));
         build.setStatus(BuildStatus.FAILED);
-        build.setErrorMessage(errorMessage);
+        build.setErrorMessage(truncate(errorMessage));
         buildRepository.save(build);
+    }
+    
+    private static String truncate(String s) {
+        if (s == null ||  s.length() <  MAX_ERROR_LENGTH) return s;
+        return s.substring(0, MAX_ERROR_LENGTH - 3) + "...";
     }
 }

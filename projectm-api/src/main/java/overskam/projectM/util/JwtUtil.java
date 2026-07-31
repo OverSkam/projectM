@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -17,14 +18,13 @@ public class JwtUtil {
     private static final long TOKEN_TTL_MS = 1000L * 60 * 60 * 24 * 7;
 
     private final SecretKey secretKey;
-
-    @Autowired
-    public JwtUtil(Dotenv dotenv) {
-        byte[] keyBytes = Base64.getUrlDecoder().decode(dotenv.get("JWT_TOKEN_SECRET"));
+    
+    public JwtUtil(@Value("${app.jwt.secret}") String secret) {
+        byte[] keyBytes = Base64.getUrlDecoder().decode(secret);
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
-
-    public String generateToken(String username, UUID userId, long version) {
+        
+        public String generateToken(String username, UUID userId, long version) {
         return Jwts.builder()
                 .subject(username)
                 .claim("uid", userId)

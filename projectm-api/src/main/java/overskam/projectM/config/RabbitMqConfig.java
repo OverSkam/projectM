@@ -1,9 +1,6 @@
 package overskam.projectM.config;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
@@ -20,15 +17,8 @@ public class RabbitMqConfig {
     }
     
     @Bean
-    public Queue compileTaskQueue() {
-        return new Queue(RabbitMqNames.COMPILE_TASK_QUEUE, true);
-    }
-    
-    @Bean
-    public Binding compileTaskBinding() {
-        return BindingBuilder.bind(compileTaskQueue())
-                .to(compileExchange())
-                .with(RabbitMqNames.COMPILE_REQUEST_ROUTING_KEY);
+    public DirectExchange cleanupExchange() {
+        return new DirectExchange(RabbitMqNames.CLEANUP_EXCHANGE, true, false);
     }
     
     @Bean

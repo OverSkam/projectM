@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import overskam.projectM.repository.jpa.PluginBuildRepository;
 import overskam.projectM.repository.jpa.UserRepository;
 import overskam.projectM.repository.jpa.VerificationTokenRepository;
 
@@ -34,6 +35,9 @@ class ProjectMApplicationTests {
 
 	@MockitoBean
 	private UserRepository userRepository;
+    
+    @MockitoBean
+    private PluginBuildRepository pluginBuildRepository;
 
 	@MockitoBean
 	private VerificationTokenRepository verificationTokenRepository;

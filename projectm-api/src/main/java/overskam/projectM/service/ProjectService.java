@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import overskam.projectM.common.dto.ProjectDeletedMessage;
 import overskam.projectM.dto.*;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
@@ -23,6 +24,7 @@ import java.util.function.Consumer;
 @AllArgsConstructor
 public class ProjectService {
     private final ProjectRepository projectRepository;
+    private final CleanupTaskPublisher cleanupTaskPublisher;
     
     public Page<ProjectNameResponse> getProjectsList(
             UUID userId, int page, int size, String sortBy, String sortDirection) {
@@ -41,6 +43,7 @@ public class ProjectService {
     public void deleteProject(UUID userId, String projectId) {
         Project project = fetchOrThrow(userId, projectId);
         projectRepository.delete(project);
+        cleanupTaskPublisher.publishProjectDeleted(new ProjectDeletedMessage(projectId, userId));
         log.info("Project with id: {} was deleted successfully", projectId);
     }
     
@@ -83,7 +86,7 @@ public class ProjectService {
         Project project = fetchOrThrow(userId, projectId);
         project.setProjectData(changeProjectDataRequest.projectData());
         projectRepository.save(project);
-        log.info("Data of project with id: {} was update successfully", project);
+        log.info("Data of project with id: {} was update successfully", project.getId());
     }
     
     private Project fetchOrThrow(UUID userId, String projectId) {

@@ -29,6 +29,16 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:projectm}
     password: ${RABBITMQ_PASSWORD:projectm}
+    listener:
+        simple:
+            prefetch: 1
+            default-requeue-rejected: false
+            retry:
+              enabled: true
+              initial-interval: 2s
+              multiplier: 2
+              max-interval: 10s
+              max-retries: 3
 
 app:
   storage:
