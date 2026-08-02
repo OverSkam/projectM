@@ -1,12 +1,9 @@
 package overskam.projectM.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import org.hibernate.validator.constraints.Length;
-import overskam.projectM.validation.FullUpdate;
 
 public record ProjectMetadataRequest(
-        @NotBlank(message = "Project name must exist", groups = FullUpdate.class)
-        @Length(max = 40)
+        @Length(min = 1, max = 40, message = "Project name must be 1-40 characters")
         String name
 ) {
 }

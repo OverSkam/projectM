@@ -1,23 +1,15 @@
 package overskam.projectM.controller;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import overskam.projectM.dto.*;
 import overskam.projectM.model.CustomUserDetails;
-import overskam.projectM.model.User;
 import overskam.projectM.service.AuthService;
-import overskam.projectM.service.CustomUserDetailsService;
 import overskam.projectM.service.TokenVersionService;
-import overskam.projectM.util.JwtUtil;
-import overskam.projectM.validation.FullUpdate;
 
 @Slf4j
 @RestController
@@ -28,7 +20,7 @@ public class AuthController {
     private final TokenVersionService tokenVersionService;
     
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody @Validated LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
         log.info("Logging in user...");
         
         return ResponseEntity.ok(
@@ -40,7 +32,7 @@ public class AuthController {
     }
     
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody @Validated(FullUpdate.class) RegisterRequest registerRequest) {
+    public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest registerRequest) {
         log.info("Registering user...");
         authService.register(registerRequest);
         return ResponseEntity.ok(new ApiResponse<>("User has been registered", null));
@@ -55,7 +47,7 @@ public class AuthController {
     }
     
     @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestBody EmailRequest emailRequest) {
+    public ResponseEntity<?> resendVerification(@RequestBody @Valid EmailRequest emailRequest) {
         log.info("User is trying to get new verification email");
         authService.resendVerification(emailRequest);
         
@@ -67,7 +59,7 @@ public class AuthController {
     }
     
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> requestPasswordReset(@RequestBody EmailRequest emailRequest) {
+    public ResponseEntity<?> requestPasswordReset(@RequestBody @Valid EmailRequest emailRequest) {
         log.info("User is requesting password reset for account with email: {}", emailRequest.email());
         authService.requestPasswordReset(emailRequest);
         
@@ -79,7 +71,7 @@ public class AuthController {
     }
     
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody @Validated PasswordResetRequest passwordResetRequest) {
+    public ResponseEntity<?> resetPassword(@RequestBody @Valid PasswordResetRequest passwordResetRequest) {
         log.info("User is trying to verify password reset");
         authService.resetPassword(passwordResetRequest);
         

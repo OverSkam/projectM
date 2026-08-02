@@ -1,5 +1,6 @@
 package overskam.projectM.controller;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -57,7 +58,7 @@ public class ProjectController {
     @PostMapping
     public ResponseEntity<?> createProject(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @RequestBody ProjectCreationRequest projectCreationRequest
+            @RequestBody @Valid ProjectCreationRequest projectCreationRequest
     ) {
         UUID userId = principal.getUser().getId();
         log.info("User with id: {} is trying to create new project", userId);
@@ -73,7 +74,7 @@ public class ProjectController {
     public ResponseEntity<?> updateProjectsMetadata(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
-            @RequestBody ProjectMetadataRequest projectMetadataRequest
+            @RequestBody @Valid ProjectMetadataRequest projectMetadataRequest
     ) {
         UUID userId = principal.getUser().getId();
         log.info("User with id: {} is trying to update metadata of project with id: {}", userId, projectId);
@@ -97,7 +98,7 @@ public class ProjectController {
     public ResponseEntity<?> replaceProjectData(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
-            @RequestBody ReplaceProjectDataRequest dataRequest
+            @RequestBody @Valid ReplaceProjectDataRequest dataRequest
     ) {
         UUID userId = principal.getUser().getId();
         log.info("User with id: {} is trying to replace project data of project with id: {}", userId, projectId);
