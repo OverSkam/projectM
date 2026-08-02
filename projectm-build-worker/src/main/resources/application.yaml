@@ -48,5 +48,5 @@ app:
     access-key: ${S3_ACCESS_KEY:projectm}
     secret-key: ${S3_SECRET_KEY:projectm123}
   compiler:
-    spigot-api-path: ${SPIGOT_API_PATH:projectm-build-worker/libs/spigot-api.jar}
+    spigot-api-path: ${SPIGOT_API_PATH:projectm-build-worker/target/libs/spigot-api.jar}
     visual-runtime-path: ${VISUAL_RUNTIME_PATH:projectm-build-worker/libs/visual-runtime.jar}

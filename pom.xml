@@ -47,6 +47,10 @@
             <name>GitHub Packages</name>
             <url>https://maven.pkg.github.com/aistartup67/visual-core-java</url>
         </repository>
+        <repository>
+            <id>spigotmc-snapshots</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
     </repositories>
 
 </project>
