@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-index-plugin-builds
+      author: overskam
+      changes:
+        - createIndex:
+            tableName: plugin_builds
+            indexName: idx_plugin_builds_project_owner
+            columns:
+              - column:
+                  name: project_id
+              - column:
+                  name: owner_id
+              - column:
+                  name: create_date
+                  descending: true

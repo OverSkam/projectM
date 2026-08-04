@@ -5,3 +5,7 @@ databaseChangeLog:
       file: db/changelog/changeset/002-create-verification-token.yaml
   - include:
       file: db/changelog/changeset/003-create-plugin-builds.yaml
+  - include:
+      file: db/changelog/changeset/004-fix-verification-token-uniqueness.yaml
+  - include:
+      file: db/changelog/changeset/005-index-plugin-builds.yaml

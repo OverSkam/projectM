@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-fix-verification-token-uniqueness
+      author: overskam
+      changes:
+        - dropUniqueConstraint:
+            tableName: verification_tokens
+            constraintName: uk_verification_tokens_user_id
+
+        - addUniqueConstraint:
+            tableName: verification_tokens
+            columnNames: user_id, type
+            constraintName: uk_verification_tokens_user_id_type

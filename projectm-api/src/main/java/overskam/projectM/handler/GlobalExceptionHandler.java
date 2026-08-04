@@ -1,6 +1,7 @@
 package overskam.projectM.handler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.DisabledException;
@@ -41,5 +42,12 @@ public class GlobalExceptionHandler {
                         (a, b) -> a));
         return ResponseEntity.badRequest()
                 .body(new ApiResponse<>("Validation failed", errors));
+    }
+    
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleConflict(DataIntegrityViolationException e) {
+        log.warn("Data integrity violation", e);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse<>("Resource already exists", null));
     }
 }
