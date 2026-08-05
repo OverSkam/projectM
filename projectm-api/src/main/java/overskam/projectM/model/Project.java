@@ -5,6 +5,7 @@ import lombok.Data;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -13,7 +14,10 @@ import java.util.UUID;
 
 @Data
 @Document(collection = "projects")
-@CompoundIndex(name = "idx_owner_name", def = "{'ownerId': 1, 'name': 1}")
+@CompoundIndexes({
+    @CompoundIndex(name = "idx_owner_name",    def = "{'ownerId': 1, 'name': 1}"),
+    @CompoundIndex(name = "idx_owner_updated", def = "{'ownerId': 1, 'lastModifiedAt': -1}")
+})
 public class Project {
     @Id
     private String id;

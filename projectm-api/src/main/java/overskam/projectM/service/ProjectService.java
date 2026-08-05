@@ -26,11 +26,15 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final CleanupTaskPublisher cleanupTaskPublisher;
     
+    private static final int MAX_PAGE_SIZE = 100;
+    
     public Page<ProjectNameResponse> getProjectsList(
             UUID userId, int page, int size, String sortBy, String sortDirection) {
-        Sort sort = SortingUtil.sortGenerator(sortBy, sortDirection);
+        Sort sort = SortingUtil.forProjects(sortBy, sortDirection);
         log.info("Fetch of projects list for user with id: {} was successful", userId);
-        return projectRepository.findByOwnerId(userId, PageRequest.of(page, size, sort))
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(0, page);
+        return projectRepository.findProjectNamesByOwnerId(userId, PageRequest.of(safePage, safeSize, sort))
                 .map(project -> new ProjectNameResponse(project.getId(), project.getName()));
     }
     

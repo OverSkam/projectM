@@ -15,7 +15,6 @@ import overskam.projectM.exception.InvalidRequestException;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.model.PluginBuild;
-import overskam.projectM.model.User;
 import overskam.projectM.repository.jpa.PluginBuildRepository;
 import overskam.projectM.repository.mongo.ProjectRepository;
 import overskam.projectM.util.SortingUtil;
@@ -30,11 +29,15 @@ public class PluginBuildService {
     private final ProjectRepository projectRepository;
     private final PluginBuildRepository buildRepository;
     
+    private static final int MAX_PAGE_SIZE = 100;
+    
     public Page<BuildResponse> getBuilds(UUID userId, String projectId, int page, int size, String sortBy, String sortDirection) {
-        Sort sort = SortingUtil.sortGenerator(sortBy, sortDirection);
+        Sort sort = SortingUtil.forBuilds(sortBy, sortDirection);
         log.info("Builds for project with id: {} was fetched successfully", projectId);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(0, page);
         return buildRepository.findByProjectIdAndOwnerId(
-                        projectId, userId, PageRequest.of(page, size, sort))
+                        projectId, userId, PageRequest.of(safePage, safeSize, sort))
                 .map(build ->
                         new BuildResponse(
                                 build.getId(),
