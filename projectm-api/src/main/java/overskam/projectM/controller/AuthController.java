@@ -20,7 +20,7 @@ public class AuthController {
     private final TokenVersionService tokenVersionService;
     
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody @Valid LoginRequest loginRequest) {
         log.info("Logging in user...");
         
         return ResponseEntity.ok(
@@ -32,14 +32,14 @@ public class AuthController {
     }
     
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest registerRequest) {
+    public ResponseEntity<ApiResponse<Void>> register(@RequestBody @Valid RegisterRequest registerRequest) {
         log.info("Registering user...");
         authService.register(registerRequest);
         return ResponseEntity.ok(new ApiResponse<>("User has been registered", null));
     }
     
     @GetMapping("/verify")
-    public ResponseEntity<?> verify(@RequestParam String token) {
+    public ResponseEntity<ApiResponse<Void>> verify(@RequestParam String token) {
         log.info("Trying to verify user's email...");
         authService.verify(token);
         
@@ -47,7 +47,7 @@ public class AuthController {
     }
     
     @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestBody @Valid EmailRequest emailRequest) {
+    public ResponseEntity<ApiResponse<Void>> resendVerification(@RequestBody @Valid EmailRequest emailRequest) {
         log.info("User is trying to get new verification email");
         authService.resendVerification(emailRequest);
         
@@ -59,7 +59,7 @@ public class AuthController {
     }
     
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> requestPasswordReset(@RequestBody @Valid EmailRequest emailRequest) {
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(@RequestBody @Valid EmailRequest emailRequest) {
         log.info("User is requesting password reset for account with email: {}", emailRequest.email());
         authService.requestPasswordReset(emailRequest);
         
@@ -71,7 +71,7 @@ public class AuthController {
     }
     
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody @Valid PasswordResetRequest passwordResetRequest) {
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody @Valid PasswordResetRequest passwordResetRequest) {
         log.info("User is trying to verify password reset");
         authService.resetPassword(passwordResetRequest);
         
@@ -79,7 +79,7 @@ public class AuthController {
     }
     
     @PostMapping("/logout-all")
-    public ResponseEntity<?> logoutAll(@AuthenticationPrincipal CustomUserDetails principal) {
+    public ResponseEntity<ApiResponse<Void>> logoutAll(@AuthenticationPrincipal CustomUserDetails principal) {
         tokenVersionService.bumpVersion(principal.getUser().getId());
         return ResponseEntity.ok(new ApiResponse<>("All sessions revoked", null));
     }

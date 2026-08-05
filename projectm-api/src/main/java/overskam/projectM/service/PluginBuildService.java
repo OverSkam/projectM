@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import overskam.projectM.common.mq.RabbitMqNames;
 import overskam.projectM.dto.ArtifactResponse;
+import overskam.projectM.dto.BuildQueuedResponse;
 import overskam.projectM.dto.BuildResponse;
 import overskam.projectM.common.dto.CompileTaskMessage;
 import overskam.projectM.exception.InvalidRequestException;
@@ -57,7 +58,7 @@ public class PluginBuildService {
     }
     
     @Transactional
-    public UUID buildProject(UUID userId, String projectId) {
+    public BuildQueuedResponse buildProject(UUID userId, String projectId) {
         if (!projectRepository.existsByIdAndOwnerId(projectId, userId))
             throw new InvalidRequestException("Project doesn't exist or user doesn't have ownership");
         
@@ -70,7 +71,7 @@ public class PluginBuildService {
                 build.getId(), projectId, userId, RabbitMqNames.RPC_REPLY_QUEUE
         ));
         log.info("Compile task was published successfully");
-        return build.getId();
+        return new BuildQueuedResponse(build.getId());
     }
     
     public ArtifactResponse getArtifact(UUID userId, String projectId, UUID buildId) {

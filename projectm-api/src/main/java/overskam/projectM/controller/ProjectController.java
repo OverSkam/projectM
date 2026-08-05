@@ -3,6 +3,7 @@ package overskam.projectM.controller;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class ProjectController {
     private final ProjectService projectService;
     
     @GetMapping
-    public ResponseEntity<?> getProjectsList(
+    public ResponseEntity<ApiResponse<Page<ProjectNameResponse>>> getProjectsList(
             @AuthenticationPrincipal CustomUserDetails principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -41,7 +42,7 @@ public class ProjectController {
     }
     
     @GetMapping("/{projectId}")
-    public ResponseEntity<?> getProject(
+    public ResponseEntity<ApiResponse<ProjectResponse>> getProject(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId
     ) {
@@ -56,7 +57,7 @@ public class ProjectController {
     }
     
     @PostMapping
-    public ResponseEntity<?> createProject(
+    public ResponseEntity<ApiResponse<ProjectCreatedResponse>> createProject(
             @AuthenticationPrincipal CustomUserDetails principal,
             @RequestBody @Valid ProjectCreationRequest projectCreationRequest
     ) {
@@ -71,7 +72,7 @@ public class ProjectController {
     }
     
     @PatchMapping("/{projectId}/metadata")
-    public ResponseEntity<?> updateProjectsMetadata(
+    public ResponseEntity<ApiResponse<Void>> updateProjectsMetadata(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
             @RequestBody @Valid ProjectMetadataRequest projectMetadataRequest
@@ -83,7 +84,7 @@ public class ProjectController {
     }
     
     @PatchMapping("/{projectId}/data")
-    public ResponseEntity<?> updateProjectsData(
+    public ResponseEntity<ApiResponse<Void>> updateProjectsData(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
             @RequestBody List<SequencedMap<String, Object>> patch
@@ -95,7 +96,7 @@ public class ProjectController {
     }
     
     @PutMapping("/{projectId}/data")
-    public ResponseEntity<?> replaceProjectData(
+    public ResponseEntity<ApiResponse<Void>> replaceProjectData(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
             @RequestBody @Valid ReplaceProjectDataRequest dataRequest
@@ -107,7 +108,7 @@ public class ProjectController {
     }
     
     @DeleteMapping("/{projectId}")
-    public ResponseEntity<?> deleteProject(
+    public ResponseEntity<ApiResponse<Void>> deleteProject(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId
     ) {

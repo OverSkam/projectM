@@ -2,10 +2,14 @@ package overskam.projectM.controller;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import overskam.projectM.dto.ApiResponse;
+import overskam.projectM.dto.ArtifactResponse;
+import overskam.projectM.dto.BuildQueuedResponse;
+import overskam.projectM.dto.BuildResponse;
 import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
 import overskam.projectM.service.PluginBuildService;
@@ -21,7 +25,7 @@ public class BuildController {
     private final PluginBuildService pluginBuildService;
     
     @GetMapping("/{projectId}/builds")
-    public ResponseEntity<?> getBuilds(
+    public ResponseEntity<ApiResponse<Page<BuildResponse>>> getBuilds(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
             @RequestParam(defaultValue = "0") int page,
@@ -40,7 +44,7 @@ public class BuildController {
     }
     
     @GetMapping("/{projectId}/builds/{buildId}")
-    public ResponseEntity<?> getBuild(
+    public ResponseEntity<ApiResponse<BuildResponse>> getBuild(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
             @PathVariable UUID buildId
@@ -56,7 +60,7 @@ public class BuildController {
     }
     
     @PostMapping("/{projectId}/compile")
-    public ResponseEntity<?> compile(
+    public ResponseEntity<ApiResponse<BuildQueuedResponse>> compile(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId
     ) {
@@ -65,13 +69,13 @@ public class BuildController {
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Compile task was queued",
-                        Map.of("buildId", pluginBuildService.buildProject(principal.getUser().getId(), projectId))
+                        pluginBuildService.buildProject(principal.getUser().getId(), projectId)
                 )
         );
     }
     
     @GetMapping("/{projectId}/builds/{buildId}/artifact")
-    public ResponseEntity<?> getArtifact(
+    public ResponseEntity<ApiResponse<ArtifactResponse>> getArtifact(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable String projectId,
             @PathVariable UUID buildId

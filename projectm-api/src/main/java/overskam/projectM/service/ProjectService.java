@@ -51,7 +51,7 @@ public class ProjectService {
         log.info("Project with id: {} was deleted successfully", projectId);
     }
     
-    public Map<String, String> createProject(UUID userId, String projectName) {
+    public ProjectCreatedResponse createProject(UUID userId, String projectName) {
         Project project = new Project();
         project.setOwnerId(userId);
         project.setName(projectName);
@@ -66,7 +66,7 @@ public class ProjectService {
         
         projectRepository.save(project);
         log.info("Project with id: {} was created successfully", project.getId());
-        return Map.of("id", project.getId());
+        return new ProjectCreatedResponse(project.getId());
     }
     
     public void updateProjectMetadata(UUID userId, String projectId, ProjectMetadataRequest projectMetadataRequest) {
