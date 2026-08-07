@@ -3,6 +3,7 @@ package overskam.projectM.service;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.plummy.visualcore.tools.MapDifferenceExtractor;
+import org.springframework.amqp.AmqpException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -47,7 +48,12 @@ public class ProjectService {
     public void deleteProject(UUID userId, String projectId) {
         Project project = fetchOrThrow(userId, projectId);
         projectRepository.delete(project);
-        cleanupTaskPublisher.publishProjectDeleted(new ProjectDeletedMessage(projectId, userId));
+        try {
+            cleanupTaskPublisher.publishProjectDeleted(new ProjectDeletedMessage(projectId, userId));
+        } catch (AmqpException e) {
+            log.error("Cleanup not scheduled, orphaned builds/artifacts for projectId={}", projectId, e);
+            throw e;
+        }
         log.info("Project with id: {} was deleted successfully", projectId);
     }
     

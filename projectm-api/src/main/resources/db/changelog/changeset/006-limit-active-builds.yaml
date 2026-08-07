@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-limit-active-builds
+      author: overskam
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX uk_active_build_per_project
+              ON plugin_builds (project_id)
+              WHERE status IN ('QUEUED', 'RUNNING')
+      rollback:
+        - sql:
+            sql: DROP INDEX uk_active_build_per_project

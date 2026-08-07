@@ -43,6 +43,7 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:projectm}
     password: ${RABBITMQ_PASSWORD:projectm}
+    publisher-confirm-type: correlated
 
 app:
   mail:

@@ -35,9 +35,12 @@ public class CompileTaskListener {
     @RabbitListener(queues = RabbitMqNames.COMPILE_TASK_QUEUE)
     public void handleCompileTask(CompileTaskMessage message) throws IOException {
         log.info("Received compile task: {}", message);
-
-        pluginBuildService.markRunning(message.buildId());
         
+        if (!pluginBuildService.claim(message.buildId())) {
+            log.info("Build already claimed or finished, skipping. buildId={}", message.buildId());
+            return;
+        }
+        try {
         Project project = projectRepository.findByIdAndOwnerId(message.projectId(), message.ownerId())
                 .orElse(null);
         
@@ -73,5 +76,9 @@ public class CompileTaskListener {
        
         String artifactKey = artifactStorageService.saveJar(message.buildId(), jar);
         pluginBuildService.markSuccess(message.buildId(), artifactKey);
+        } catch (IOException | RuntimeException e) {
+            pluginBuildService.release(message.buildId());
+            throw e;
+        }
     }
 }

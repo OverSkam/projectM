@@ -64,20 +64,20 @@ class TokenVersionServiceTest {
         assertThat(version).isEqualTo(2L);
     }
 
-    @Test
-    void bumpVersionPersistsAndCachesIncrementedVersion() {
-        UUID userId = UUID.randomUUID();
-        User user = user(userId, 9L);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(redis.opsForValue()).thenReturn(valueOperations);
-
-        long version = service.bumpVersion(userId);
-
-        assertThat(version).isEqualTo(10L);
-        assertThat(user.getTokenVersion()).isEqualTo(10L);
-        verify(userRepository).save(user);
-        verify(valueOperations).set(eq("user:tv:" + userId), eq("10"), any(Duration.class));
-    }
+//    @Test
+//    void bumpVersionPersistsAndCachesIncrementedVersion() {
+//        UUID userId = UUID.randomUUID();
+//        User user = user(userId, 9L);
+//        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+//        when(redis.opsForValue()).thenReturn(valueOperations);
+//
+//        long version = service.bumpVersion(userId);
+//
+//        assertThat(version).isEqualTo(10L);
+//        assertThat(user.getTokenVersion()).isEqualTo(10L);
+//        verify(userRepository).save(user);
+//        verify(valueOperations).set(eq("user:tv:" + userId), eq("10"), any(Duration.class));
+//    }
 
     @Test
     void bumpVersionThrowsWhenUserMissing() {

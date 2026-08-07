@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changeset/004-fix-verification-token-uniqueness.yaml
   - include:
       file: db/changelog/changeset/005-index-plugin-builds.yaml
+  - include:
+      file: db/changelog/changeset/006-limit-active-builds.yaml

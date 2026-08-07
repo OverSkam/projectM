@@ -7,11 +7,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import overskam.projectM.common.mq.RabbitMqNames;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import overskam.projectM.common.dto.CompileTaskMessage;
+import overskam.projectM.common.enums.BuildStatus;
 import overskam.projectM.dto.ArtifactResponse;
 import overskam.projectM.dto.BuildQueuedResponse;
 import overskam.projectM.dto.BuildResponse;
-import overskam.projectM.common.dto.CompileTaskMessage;
 import overskam.projectM.exception.InvalidRequestException;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
@@ -20,6 +22,7 @@ import overskam.projectM.repository.jpa.PluginBuildRepository;
 import overskam.projectM.repository.mongo.ProjectRepository;
 import overskam.projectM.util.SortingUtil;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -62,15 +65,23 @@ public class PluginBuildService {
         if (!projectRepository.existsByIdAndOwnerId(projectId, userId))
             throw new InvalidRequestException("Project doesn't exist or user doesn't have ownership");
         
+        if (buildRepository.existsByProjectIdAndStatusIn(projectId, List.of(BuildStatus.QUEUED, BuildStatus.RUNNING)))
+            throw new InvalidRequestException("Build already in progress for this project");
+        
         PluginBuild build = new PluginBuild();
         build.setProjectId(projectId);
         build.setOwnerId(userId);
         buildRepository.save(build);
         
-        buildQueuePublisher.publish(new CompileTaskMessage(
-                build.getId(), projectId, userId, RabbitMqNames.RPC_REPLY_QUEUE
-        ));
-        log.info("Compile task was published successfully");
+        CompileTaskMessage message = new CompileTaskMessage(build.getId(), projectId, userId);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                buildQueuePublisher.publish(message);
+                log.info("Compile task published, buildId={}", message.buildId());
+            }
+        });
+        
         return new BuildQueuedResponse(build.getId());
     }
     

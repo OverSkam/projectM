@@ -6,6 +6,8 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.model.User;
 import overskam.projectM.repository.jpa.UserRepository;
@@ -44,22 +46,29 @@ public class TokenVersionService {
         return fromDb;
     }
     
-    @Transactional
-    public long bumpVersion(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
-        long newTokenVersion = user.getTokenVersion() + 1;
-        user.setTokenVersion(newTokenVersion);
-        userRepository.save(user);
+    public void bumpVersion(UUID userId) {
+        if (userRepository.incrementTokenVersion(userId) == 0)
+            throw new NotFoundException("User not found");
         
-        String key = KEY_PREFIX + userId;
+        if (TransactionSynchronizationManager.isSynchronizationActive())
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    evictCache(userId);
+                }
+            });
+        else
+            evictCache(userId);
+        
+        log.info("Bumped tokenVersion for userId={}", userId);
+    }
+    
+    private void evictCache(UUID userId) {
         try {
-            redis.opsForValue().set(key, Long.toString(newTokenVersion), CACHE_TTL);
+            redis.delete(KEY_PREFIX + userId);
         } catch (DataAccessException e) {
-            log.warn("Redis unavailable on bump for userId={}; cache will repopulate from DB on next read", userId, e);
+            log.warn("Redis unavailable on bump for userId={}; cache will repopulate from DB", userId, e);
         }
-        log.info("Bumped tokenVersion for userId={} to {}", userId, newTokenVersion);
-        return newTokenVersion;
     }
     
     private long loadTokenFromDB(UUID userId) {

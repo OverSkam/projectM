@@ -19,11 +19,13 @@ public class WorkerPluginBuildService {
     private static final int MAX_ERROR_LENGTH = 2000;
     
     @Transactional
-    public void markRunning(UUID buildId) {
-        PluginBuild build = buildRepository.findById(buildId)
-                .orElseThrow(() -> new IllegalArgumentException("Build not found"));
-        build.setStatus(BuildStatus.RUNNING);
-        buildRepository.save(build);
+    public boolean claim(UUID buildId) {
+        return buildRepository.updateStatusIfCurrent(buildId, BuildStatus.QUEUED, BuildStatus.RUNNING) == 1;
+    }
+    
+    @Transactional
+    public void release(UUID buildId) {
+        buildRepository.updateStatusIfCurrent(buildId, BuildStatus.RUNNING, BuildStatus.QUEUED);
     }
     
     @Transactional
