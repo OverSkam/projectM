@@ -80,32 +80,28 @@ class AuthControllerTest {
             return null;
         }).when(jwtFilter).doFilter(any(ServletRequest.class), any(ServletResponse.class), any(FilterChain.class));
     }
-
+    
     @Test
     void loginReturnsJwtForEnabledUser() throws Exception {
-        UUID userId = UUID.randomUUID();
-        User user = user(userId, true, 3L);
-        when(userDetailsService.loadUserByUsername("user@test.com")).thenReturn(new CustomUserDetails(user));
-        when(jwtUtil.generateToken("user@test.com", userId, 3L)).thenReturn("jwt-token");
-
+        LoginRequest request = new LoginRequest("user@test.com", "password123");
+        when(authService.login(request)).thenReturn("jwt-token");
+        
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(new LoginRequest("user@test.com", "password123"))))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("User logged in successfully"))
                 .andExpect(jsonPath("$.data.token").value("jwt-token"));
-
-        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
     }
-
+    
     @Test
     void loginReturnsForbiddenForDisabledUser() throws Exception {
-        User user = user(UUID.randomUUID(), false, 0L);
-        when(userDetailsService.loadUserByUsername("user@test.com")).thenReturn(new CustomUserDetails(user));
-
+        LoginRequest request = new LoginRequest("user@test.com", "password123");
+        when(authService.login(request)).thenThrow(new DisabledException("Please verify your email"));
+        
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(new LoginRequest("user@test.com", "password123"))))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Please verify your email"));
     }
@@ -227,11 +223,24 @@ class AuthControllerTest {
 
         verify(tokenVersionService).bumpVersion(userId);
     }
-
+    
     @Test
     void logoutAllRequiresAuthentication() throws Exception {
         mockMvc.perform(post("/api/v1/auth/logout-all"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+    
+    @Test
+    void wrongHttpMethodOnRealPathReturns405() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/login"))
+                .andExpect(status().isMethodNotAllowed());
+    }
+    
+    @Test
+    void unknownPathReturns404() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/does-not-exist"))
+                .andExpect(status().isNotFound());
     }
 
     private static User user(UUID id, boolean enabled, long tokenVersion) {

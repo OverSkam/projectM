@@ -17,9 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @SpringBootTest(
 		properties = {
-				"app.mail.from=test@projectm.local",
-				"app.mail.verification-url=http://localhost:8080/api/v1/auth/verify",
-				"app.mail.password-reset-url=http://localhost:8080/api/v1/auth/reset-password",
 				"spring.autoconfigure.exclude="
 						+ "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
 						+ "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"

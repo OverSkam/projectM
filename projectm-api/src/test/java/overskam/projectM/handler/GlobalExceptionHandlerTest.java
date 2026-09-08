@@ -22,7 +22,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleDisabledExceptionReturnsForbidden() {
-        ResponseEntity<?> response = handler.handleException(new DisabledException("disabled"));
+        ResponseEntity<?> response = handler.handleDisabled(new DisabledException("disabled"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(((ApiResponse<?>) response.getBody()).message()).isEqualTo("disabled");

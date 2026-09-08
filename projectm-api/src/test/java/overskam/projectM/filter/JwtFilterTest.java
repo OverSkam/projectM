@@ -13,6 +13,7 @@ import overskam.projectM.model.User;
 import overskam.projectM.service.CustomUserDetailsService;
 import overskam.projectM.service.TokenVersionService;
 import overskam.projectM.util.JwtUtil;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
 
@@ -25,7 +26,7 @@ class JwtFilterTest {
     private final JwtUtil jwtUtil = mock(JwtUtil.class);
     private final CustomUserDetailsService userDetailsService = mock(CustomUserDetailsService.class);
     private final TokenVersionService tokenVersionService = mock(TokenVersionService.class);
-    private final JwtFilter filter = new JwtFilter(jwtUtil, userDetailsService, tokenVersionService);
+    private final JwtFilter filter = new JwtFilter(jwtUtil, userDetailsService, tokenVersionService, new ObjectMapper());
 
     @AfterEach
     void tearDown() {

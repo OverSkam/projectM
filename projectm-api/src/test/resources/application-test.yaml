@@ -1,0 +1,12 @@
+spring:
+  data:
+    mongodb:
+      auto-index-creation: false
+
+app:
+  jwt:
+    secret: dGVzdC1zZWNyZXQtZm9yLXVuaXQtdGVzdHMtb25seS0zMi1ieXRlcw
+  mail:
+    from: test@projectm.local
+    verification-url: http://localhost:5173/verify
+    password-reset-url: http://localhost:5173/reset-password

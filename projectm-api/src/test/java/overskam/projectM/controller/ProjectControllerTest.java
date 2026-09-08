@@ -16,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import overskam.projectM.config.SecurityConfig;
+import overskam.projectM.dto.ProjectCreatedResponse;
 import overskam.projectM.dto.ProjectNameResponse;
 import overskam.projectM.dto.ProjectResponse;
 import overskam.projectM.exception.NotFoundException;
@@ -125,7 +126,7 @@ class ProjectControllerTest {
     
     @Test
     void createProjectDelegatesToService() throws Exception {
-        when(projectService.createProject(USER_ID, "My Plugin")).thenReturn(Map.of("id", "abc123"));
+        when(projectService.createProject(USER_ID, "My Plugin")).thenReturn(new ProjectCreatedResponse("abc123"));
         
         mockMvc.perform(post("/api/v1/projects").with(asUser())
                         .contentType("application/json")

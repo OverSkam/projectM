@@ -2,16 +2,18 @@ package overskam.projectM.handler;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import overskam.projectM.dto.ApiResponse;
 import overskam.projectM.exception.ApiException;
 
@@ -22,7 +24,21 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+    
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(
+            Exception e, Object body, HttpHeaders headers,
+            HttpStatusCode statusCode, WebRequest request) {
+        
+        if (body == null || body instanceof ProblemDetail) {
+            String message = e instanceof ErrorResponse errorResponse && errorResponse.getBody().getDetail() != null
+                    ? errorResponse.getBody().getDetail()
+                    : HttpStatus.valueOf(statusCode.value()).getReasonPhrase();
+            body = new ApiResponse<>(message, null);
+        }
+        return super.handleExceptionInternal(e, body, headers, statusCode, request);
+    }
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException e) {
@@ -37,17 +53,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse<>(e.getMessage(), null));
     }
     
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException e) {
-        Map<String, String> errors = e.getBindingResult().getFieldErrors().stream()
-                .collect(Collectors.toMap(
-                        FieldError::getField,
-                        err -> Objects.requireNonNullElse(err.getDefaultMessage(), "invalid"),
-                        (a, b) -> a));
-        return ResponseEntity.badRequest()
-                .body(new ApiResponse<>("Validation failed", errors));
-    }
-    
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConflict(DataIntegrityViolationException e) {
         log.warn("Data integrity violation", e);
@@ -55,10 +60,27 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>("Resource already exists", null));
     }
     
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleUnreadable(HttpMessageNotReadableException e) {
-        log.warn("Malformed request body: {}", e.getMostSpecificCause().getMessage());
-        return ResponseEntity.badRequest().body(new ApiResponse<>("Malformed request body", null));
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        
+        Map<String, String> errors = ex.getBindingResult().getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        err -> Objects.requireNonNullElse(err.getDefaultMessage(), "invalid"),
+                        (a, b) -> a));
+        
+        return handleExceptionInternal(ex, new ApiResponse<>("Validation failed", errors), headers, status, request);
+    }
+    
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        
+        log.warn("Malformed request body: {}", ex.getMostSpecificCause().getMessage());
+        return handleExceptionInternal(ex, new ApiResponse<>("Malformed request body", null), headers, status, request);
     }
     
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
