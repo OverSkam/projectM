@@ -278,6 +278,11 @@ Honest state of things rather than a roadmap.
   which lets an anonymous caller check whether an address is registered.
 - **Keep worker concurrency at one.** The compiler caches runtime jars lazily and its
   thread-safety has not been established.
+- **Mongo indexes are created from annotations at startup**, unlike the Postgres schema,
+  which Liquibase owns. They have no migration history, a changed index definition would
+  fail on boot against the existing index, and the two modules that map the `projects`
+  collection do not declare the same set. Moving them to an explicit migration step, and
+  checking rather than creating them at startup, is pending.
 - **Test coverage is thin**, and the existing tests lean on mocks in exactly the places
   where the interesting bugs live: schema constraints, transaction boundaries, and broker
   retry behaviour.
