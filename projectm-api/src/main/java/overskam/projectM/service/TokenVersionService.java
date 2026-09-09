@@ -5,11 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import overskam.projectM.exception.NotFoundException;
-import overskam.projectM.model.User;
 import overskam.projectM.repository.jpa.UserRepository;
 
 import java.time.Duration;

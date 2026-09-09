@@ -11,10 +11,8 @@ import overskam.projectM.dto.ArtifactResponse;
 import overskam.projectM.dto.BuildQueuedResponse;
 import overskam.projectM.dto.BuildResponse;
 import overskam.projectM.model.CustomUserDetails;
-import overskam.projectM.model.User;
 import overskam.projectM.service.PluginBuildService;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j

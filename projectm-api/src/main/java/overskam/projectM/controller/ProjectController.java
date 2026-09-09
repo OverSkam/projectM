@@ -9,7 +9,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import overskam.projectM.dto.*;
 import overskam.projectM.model.CustomUserDetails;
-import overskam.projectM.model.User;
 import overskam.projectM.service.ProjectService;
 
 import java.util.List;

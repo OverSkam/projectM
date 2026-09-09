@@ -28,7 +28,6 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        format-sql: true
         default-schema: ${DB_SCHEMA:public}
 
   liquibase:
