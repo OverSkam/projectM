@@ -14,5 +14,3 @@ spring:
 app:
   mail:
     from: ${APP_MAIL_FROM:ProjectM Local <no-reply@projectm.test>}
-    verification-url: ${APP_VERIFICATION_URL:http://localhost:8080/api/v1/auth/verify}
-    password-reset-url: ${APP_VERIFICATION_URL:http://localhost:8080/api/v1/auth/reset-password}

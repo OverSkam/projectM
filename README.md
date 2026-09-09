@@ -122,6 +122,12 @@ openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
 Registration and password reset send real email through SMTP. The `local` profile points at
 [Mailtrap](https://mailtrap.io), which captures messages instead of delivering them.
 
+Both emails link to the **web client**, not to the API, because completing a password reset
+requires a form. The client reads the `token` query parameter and calls the API itself:
+`/verify` calls `GET /api/v1/auth/verify`, and `/reset-password` posts the token together
+with the new password. Point `APP_VERIFICATION_URL` and `APP_PASSWORD_RESET_URL` at wherever
+the client is served.
+
 **4. Install the modules into the local repository**
 
 ```bash
@@ -162,6 +168,9 @@ environment variables or `.env`.
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` / `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | `localhost` / `5672` / `projectm` / `projectm` | RabbitMQ |
 | `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `http://localhost:9000` / `projectm-artifacts` / `projectm` / `projectm123` | Artifact storage (worker) |
 | `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Allowed browser origins |
+| `APP_VERIFICATION_URL` | `http://localhost:5173/verify` | Frontend page the verification email links to |
+| `APP_PASSWORD_RESET_URL` | `http://localhost:5173/reset-password` | Frontend page the password reset email links to |
+| `APP_MAIL_FROM` | `no-reply@projectm.local` | Sender address on outgoing mail |
 | `MAILTRAP_USERNAME` / `MAILTRAP_PASSWORD` | *(none)* | SMTP credentials on the `local` profile |
 | `RESEND_API_KEY` | *(none)* | SMTP credentials on the `prod` profile |
 
