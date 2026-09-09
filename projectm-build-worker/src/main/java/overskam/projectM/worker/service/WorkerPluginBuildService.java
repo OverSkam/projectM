@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import overskam.projectM.common.enums.BuildStatus;
-import overskam.projectM.worker.model.PluginBuild;
 import overskam.projectM.worker.repository.jpa.PluginBuildRepository;
 
 import java.util.UUID;
@@ -29,21 +28,20 @@ public class WorkerPluginBuildService {
     }
     
     @Transactional
-    public void markSuccess(UUID buildId, String artifactKey) {
-        PluginBuild build = buildRepository.findById(buildId)
-                .orElseThrow(() -> new IllegalArgumentException("Build not found"));
-        build.setStatus(BuildStatus.SUCCESS);
-        build.setArtifactKey(artifactKey);
-        buildRepository.save(build);
+    public boolean markSuccess(UUID buildId, String artifactKey) {
+        int updated = buildRepository.finishIfCurrent(
+                buildId, BuildStatus.RUNNING, BuildStatus.SUCCESS, artifactKey, null);
+        if (updated == 0)
+            log.warn("Build {} was no longer RUNNING at completion; discarding artifact {}", buildId, artifactKey);
+        return updated == 1;
     }
     
     @Transactional
     public void markFailed(UUID buildId, String errorMessage) {
-        PluginBuild build = buildRepository.findById(buildId)
-                .orElseThrow(() -> new IllegalArgumentException("Build not found"));
-        build.setStatus(BuildStatus.FAILED);
-        build.setErrorMessage(truncate(errorMessage));
-        buildRepository.save(build);
+        int updated = buildRepository.finishIfCurrent(
+                buildId, BuildStatus.RUNNING, BuildStatus.FAILED, null, truncate(errorMessage));
+        if (updated == 0)
+            log.warn("Build {} was no longer RUNNING at failure; result discarded", buildId);
     }
     
     private static String truncate(String s) {

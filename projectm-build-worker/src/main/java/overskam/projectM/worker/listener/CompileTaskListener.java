@@ -75,7 +75,13 @@ public class CompileTaskListener {
         }
        
         String artifactKey = artifactStorageService.saveJar(message.buildId(), jar);
-        pluginBuildService.markSuccess(message.buildId(), artifactKey);
+        if (!pluginBuildService.markSuccess(message.buildId(), artifactKey)) {
+            try {
+                artifactStorageService.deleteByKey(artifactKey);
+            } catch (RuntimeException e) {
+                log.warn("Could not delete orphaned artifact {}", artifactKey, e);
+            }
+        }
         } catch (IOException | RuntimeException e) {
             pluginBuildService.release(message.buildId());
             throw e;
