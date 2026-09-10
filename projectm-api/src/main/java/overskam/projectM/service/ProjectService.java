@@ -104,7 +104,7 @@ public class ProjectService {
                 .orElseThrow(() -> new NotFoundException("Project not found"));
         
         if (!project.getOwnerId().equals(userId))
-            throw new OwnershipException("UUID trying to access not his project");
+            throw new OwnershipException("User is trying to access not his project");
         
         return project;
     }
