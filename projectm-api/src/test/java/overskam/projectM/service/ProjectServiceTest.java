@@ -302,8 +302,8 @@ class ProjectServiceTest {
     }
     
     @Nested
-    @DisplayName("Projects metadata update")
-    class ProjectsMetadataUpdateTest {
+    @DisplayName("Updates project metadata")
+    class UpdateProjectMetadataTest {
         @Test
         @DisplayName("Updates projects metadata when project name is not null")
         void updatesProjectsMetadata() {
@@ -361,8 +361,8 @@ class ProjectServiceTest {
     }
     
     @Nested
-    @DisplayName("Projects data replacement")
-    class ProjectsDataReplacement {
+    @DisplayName("Replaces project data")
+    class ReplaceProjectDataTest {
         @Test
         @DisplayName("Replaces projects data entirely")
         void replacesProjectsData() {
@@ -414,6 +414,131 @@ class ProjectServiceTest {
         }
     }
     
+    @Nested
+    @DisplayName("Updates project data ")
+    class UpdateProjectDataTest {
+        @Test
+        @DisplayName("Applies the patch and leaves untouched keys alone")
+        void updatesProjectData() {
+            UUID userId = UUID.randomUUID();
+            Project project = new Project();
+            project.setOwnerId(userId);
+            project.setId("abc123");
+            project.setProjectData(
+                    Map.of("pluginName", "Old name",
+                            "version", "1.0.0",
+                            "author", "ProjectM",
+                            "modules", List.of(),
+                            "legacy", List.of(),
+                            "variables", Map.of())
+            );
+            
+            List<SequencedMap<String, Object>> patch = List.of(
+                    op("replace", "/pluginName", "New name"),
+                    op("remove", "/legacy", null));
+            
+            when(projectRepository.findById("abc123")).thenReturn(Optional.of(project));
+            projectService.updateProjectData(userId, "abc123", patch);
+            
+            ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
+            verify(projectRepository).save(captor.capture());
+            
+            Project result = captor.getValue();
+            assertEquals(
+                    Map.of("pluginName", "New name",
+                            "version", "1.0.0",
+                            "author", "ProjectM",
+                            "modules", List.of(),
+                            "variables", Map.of()),
+                    result.getProjectData());
+        }
+        
+        @Test
+        @DisplayName("Applies the patch to an empty document when the project has no data yet")
+        void doNotUpdateWhenProjectDataIsNull() {
+            UUID userId = UUID.randomUUID();
+            Project project = new Project();
+            project.setOwnerId(userId);
+            project.setId("abc123");
+            project.setProjectData(null);
+            
+            List<SequencedMap<String, Object>> patch = List.of(
+                    op("replace", "/pluginName", "New name")
+            );
+            
+            when(projectRepository.findById("abc123")).thenReturn(Optional.of(project));
+            projectService.updateProjectData(userId, "abc123", patch);
+            
+            ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
+            verify(projectRepository).save(captor.capture());
+            
+            Project result = captor.getValue();
+            assertEquals(
+                    Map.of("pluginName", "New name"),
+                    result.getProjectData()
+            );
+        }
+        
+        @Test
+        @DisplayName("Applies changes to child path when parent path exists")
+        void updatesWhenParentPathExists() {
+            UUID userId = UUID.randomUUID();
+            Project project = new Project();
+            project.setOwnerId(userId);
+            project.setId("abc123");
+            project.setProjectData(Map.of("variables", Map.of("count", 1)));
+            
+            List<SequencedMap<String, Object>> patch = List.of(
+                    op("replace", "/variables/count", 5)
+            );
+            
+            when(projectRepository.findById("abc123")).thenReturn(Optional.of(project));
+            projectService.updateProjectData(userId, "abc123", patch);
+            
+            ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
+            verify(projectRepository).save(captor.capture());
+            
+            Project result = captor.getValue();
+            assertEquals(
+                    Map.of("variables", Map.of("count", 5)),
+                    result.getProjectData()
+            );
+        }
+        
+        @Test
+        @DisplayName("Throws IllegalArgumentException when parent path does not exist")
+        void failsWhenParentPathDoesNotExist() {
+            UUID userId = UUID.randomUUID();
+            Project project = new Project();
+            project.setOwnerId(userId);
+            project.setId("abc123");
+            project.setProjectData(Map.of());
+            
+            List<SequencedMap<String, Object>> patch = List.of(
+                    op("replace", "/variables/count", 5)
+            );
+            
+            when(projectRepository.findById("abc123")).thenReturn(Optional.of(project));
+            assertThrows(IllegalArgumentException.class,
+                    () -> projectService.updateProjectData(userId, "abc123", patch)
+            );
+            verify(projectRepository, never()).save(any(Project.class));
+        }
+        
+        @Test
+        @DisplayName("Changes nothing when the project belongs to another user")
+        void doesNotPatchWhenUserIsNotOwner() {
+            projectOwnedBySomeoneElse("abc123");
+            List<SequencedMap<String, Object>> patch = List.of();
+            
+            assertThrowsExactly(OwnershipException.class,
+                    () -> projectService.updateProjectData(UUID.randomUUID(), "abc123", patch)
+            );
+            
+            verify(projectRepository, never()).save(any(Project.class));
+        }
+    }
+    
     private static ProjectRepository.ProjectNameView view(String id, String name) {
         return new ProjectRepository.ProjectNameView() {
             @Override
@@ -434,5 +559,13 @@ class ProjectServiceTest {
         project.setOwnerId(UUID.randomUUID());
         when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
         return project;
+    }
+    
+    private static SequencedMap<String, Object> op(String op, String path, Object value) {
+        SequencedMap<String, Object> entry = new LinkedHashMap<>();
+        entry.put("op", op);
+        entry.put("path", path);
+        if (value != null) entry.put("value", value);
+        return entry;
     }
 }
