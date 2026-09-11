@@ -96,7 +96,7 @@ public class ProjectService {
         Project project = fetchOrThrow(userId, projectId);
         project.setProjectData(changeProjectDataRequest.projectData());
         projectRepository.save(project);
-        log.info("Data of project with id: {} was update successfully", project.getId());
+        log.info("Project data of project with id: {} was update successfully", project.getId());
     }
     
     private Project fetchOrThrow(UUID userId, String projectId) {
