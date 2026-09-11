@@ -8,7 +8,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import overskam.projectM.common.dto.ProjectDeletedMessage;
 import overskam.projectM.dto.*;
 import overskam.projectM.exception.NotFoundException;

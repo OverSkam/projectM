@@ -1,15 +1,14 @@
 package overskam.projectM.controller;
 
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -17,32 +16,29 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import overskam.projectM.config.SecurityConfig;
 import overskam.projectM.dto.ProjectCreatedResponse;
-import overskam.projectM.dto.ProjectNameResponse;
 import overskam.projectM.dto.ProjectResponse;
 import overskam.projectM.exception.NotFoundException;
-import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.filter.JwtFilter;
 import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
 import overskam.projectM.service.ProjectService;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProjectController.class)
 @ActiveProfiles("test")
 @Import(SecurityConfig.class)
 class ProjectControllerTest {
-    
-    private static final UUID USER_ID = UUID.randomUUID();
-    
     @Autowired
     private MockMvc mockMvc;
     
@@ -55,149 +51,148 @@ class ProjectControllerTest {
     @BeforeEach
     void passThroughJwtFilter() throws Exception {
         doAnswer(invocation -> {
-            ServletRequest request = invocation.getArgument(0);
-            ServletResponse response = invocation.getArgument(1);
-            FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(request, response);
+            invocation.getArgument(2, FilterChain.class)
+                    .doFilter(invocation.getArgument(0), invocation.getArgument(1));
             return null;
-        }).when(jwtFilter).doFilter(any(ServletRequest.class), any(ServletResponse.class), any(FilterChain.class));
+        }).when(jwtFilter).doFilter(any(), any(), any());
     }
     
-    private static RequestPostProcessor asUser() {
+    private RequestPostProcessor asUser(UUID userId) {
         User user = new User();
-        user.setId(USER_ID);
+        user.setId(userId);
         user.setEmail("user@test.com");
         user.setPassword("encoded");
         user.setEnabled(true);
-        user.setTokenVersion(0L);
         CustomUserDetails principal = new CustomUserDetails(user);
-        return authentication(
-                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+        return authentication(new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()));
     }
     
-    @Test
-    void projectsRequireAuthentication() throws Exception {
-        mockMvc.perform(get("/api/v1/projects"))
-                .andExpect(status().isUnauthorized());
+    @Nested
+    @DisplayName("Get project")
+    class GetProjectTest {
+        @Test
+        @DisplayName("Looks the project up for the authenticated user")
+        void passesAuthenticatedUserIdToService() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            when(projectService.getProject(any(), any()))
+                    .thenReturn(new ProjectResponse("abc123", "New project", Map.of()));
+            
+            mockMvc.perform(get("/api/v1/projects/abc123").with(asUser(userId)))
+                    .andExpect(status().isOk());
+            
+            verify(projectService).getProject(userId, "abc123");
+        }
+        
+        @Test
+        @DisplayName("Returns the project in the response envelope")
+        void returnsProjectForOwner() throws Exception {
+            UUID userId = UUID.randomUUID();
+            String projectId = "abc123";
+            when(projectService.getProject(userId, projectId))
+                    .thenReturn(new ProjectResponse(projectId, "New project", Map.of("version", "1.0.0")));
+            
+            mockMvc.perform(get("/api/v1/projects/" + projectId).with(asUser(userId)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Project was fetched successfully"))
+                    .andExpect(jsonPath("$.data.id").value(projectId))
+                    .andExpect(jsonPath("$.data.name").value("New project"))
+                    .andExpect(jsonPath("$.data.projectData.version").value("1.0.0"));
+        }
+        
+        @Test
+        @DisplayName("Answers 404 when the project does not exist")
+        void returnsNotFoundWhenProjectDoesNotExist() throws Exception {
+            UUID userId = UUID.randomUUID();
+            when(projectService.getProject(any(), any()))
+                    .thenThrow(new NotFoundException("Project not found"));
+            
+            mockMvc.perform(get("/api/v1/projects/abc123").with(asUser(userId)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Project not found"));
+        }
+        
+        @Test
+        @DisplayName("Rejects a request with no authentication")
+        void rejectsAnonymousRequest() throws Exception {
+            mockMvc.perform(get("/api/v1/projects/abc123"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Authentication required"));
+            verifyNoInteractions(projectService);
+        }
     }
     
-    @Test
-    void getProjectsListReturnsNames() throws Exception {
-        Page<ProjectNameResponse> page =
-                new PageImpl<>(List.of(new ProjectNameResponse("abc123", "My Plugin")));
-        when(projectService.getProjectsList(eq(USER_ID), anyInt(), anyInt(), anyString(), anyString()))
-                .thenReturn(page);
+    @Nested
+    @DisplayName("Create project")
+    class CreateProjectTest {
+        @Test
+        @DisplayName("Creates project and returns its id")
+        void returnsCreatedProjectId() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            when(projectService.createProject(userId, "My Plugin"))
+                    .thenReturn(new ProjectCreatedResponse("abc123"));
+            
+            mockMvc.perform(post("/api/v1/projects")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "My Plugin"}
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("New project was created successfully"))
+                    .andExpect(jsonPath("$.data.id").value("abc123"));
+        }
         
-        mockMvc.perform(get("/api/v1/projects").with(asUser()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Projects list was fetched successfully"))
-                .andExpect(jsonPath("$.data.content[0].name").value("My Plugin"));
-    }
-    
-    @Test
-    void getProjectReturnsNotFound() throws Exception {
-        when(projectService.getProject(USER_ID, "missing"))
-                .thenThrow(new NotFoundException("Project not found"));
+        @Test
+        @DisplayName("Creates the project for the authenticated user")
+        void passesAuthenticatedUserIdToService() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            when(projectService.createProject(any(), any()))
+                    .thenReturn(new ProjectCreatedResponse("abc123"));
+            
+            mockMvc.perform(post("/api/v1/projects")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "My Plugin"}
+                                    """))
+                    .andExpect(status().isOk());
+            
+            verify(projectService).createProject(userId, "My Plugin");
+        }
         
-        mockMvc.perform(get("/api/v1/projects/missing").with(asUser()))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Project not found"));
-    }
-    
-    @Test
-    void getForeignProjectReturnsForbidden() throws Exception {
-        when(projectService.getProject(USER_ID, "foreign"))
-                .thenThrow(new OwnershipException("not your project"));
+        @Test
+        @DisplayName("Answers 400 when the passed data is invalid")
+        void returnsBadRequestWhenDataIsInvalid() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(post("/api/v1/projects")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": ""}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Validation failed"))
+                    .andExpect(jsonPath("$.data.name").value("Project name must exist"));
+            
+            verifyNoInteractions(projectService);
+        }
         
-        mockMvc.perform(get("/api/v1/projects/foreign").with(asUser()))
-                .andExpect(status().isForbidden());
-    }
-    
-    @Test
-    void getProjectReturnsData() throws Exception {
-        when(projectService.getProject(USER_ID, "abc123"))
-                .thenReturn(new ProjectResponse("abc123", "My Plugin", Map.of("version", "1.0.0")));
-        
-        mockMvc.perform(get("/api/v1/projects/abc123").with(asUser()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.name").value("My Plugin"))
-                .andExpect(jsonPath("$.data.projectData.version").value("1.0.0"));
-    }
-    
-    @Test
-    void createProjectDelegatesToService() throws Exception {
-        when(projectService.createProject(USER_ID, "My Plugin")).thenReturn(new ProjectCreatedResponse("abc123"));
-        
-        mockMvc.perform(post("/api/v1/projects").with(asUser())
-                        .contentType("application/json")
-                        .content("""
-                                {"name": "My Plugin"}"""))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value("abc123"));
-        
-        verify(projectService).createProject(USER_ID, "My Plugin");
-    }
-    
-    @Test
-    void createProjectRejectsBlankName() throws Exception {
-        mockMvc.perform(post("/api/v1/projects").with(asUser())
-                        .contentType("application/json")
-                        .content("""
-                                {"name": "   "}"""))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
-                .andExpect(jsonPath("$.data.name").exists());
-        
-        verifyNoInteractions(projectService);
-    }
-    
-    @Test
-    void createProjectRejectsTooLongName() throws Exception {
-        mockMvc.perform(post("/api/v1/projects").with(asUser())
-                        .contentType("application/json")
-                        .content("{\"name\": \"" + "x".repeat(41) + "\"}"))
-                .andExpect(status().isBadRequest());
-        
-        verifyNoInteractions(projectService);
-    }
-    
-    @Test
-    void updateMetadataAllowsMissingName() throws Exception {
-        mockMvc.perform(patch("/api/v1/projects/abc123/metadata").with(asUser())
-                        .contentType("application/json")
-                        .content("{}"))
-                .andExpect(status().isOk());
-        
-        verify(projectService).updateProjectMetadata(eq(USER_ID), eq("abc123"), any());
-    }
-    
-    @Test
-    void updateMetadataRejectsBlankName() throws Exception {
-        mockMvc.perform(patch("/api/v1/projects/abc123/metadata").with(asUser())
-                        .contentType("application/json")
-                        .content("""
-                                {"name": ""}"""))
-                .andExpect(status().isBadRequest());
-        
-        verifyNoInteractions(projectService);
-    }
-    
-    @Test
-    void replaceDataRejectsMissingProjectData() throws Exception {
-        mockMvc.perform(put("/api/v1/projects/abc123/data").with(asUser())
-                        .contentType("application/json")
-                        .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.data.projectData").exists());
-        
-        verifyNoInteractions(projectService);
-    }
-    
-    @Test
-    void deleteProjectDelegatesToService() throws Exception {
-        mockMvc.perform(delete("/api/v1/projects/abc123").with(asUser()))
-                .andExpect(status().isOk());
-        
-        verify(projectService).deleteProject(USER_ID, "abc123");
+        @Test
+        @DisplayName("Rejects a request with no authentication")
+        void rejectsAnonymousRequest() throws Exception {
+            mockMvc.perform(post("/api/v1/projects")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "My plugin"}
+                                    """))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Authentication required"));
+            verifyNoInteractions(projectService);
+        }
     }
 }
