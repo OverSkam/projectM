@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
@@ -16,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import overskam.projectM.config.SecurityConfig;
 import overskam.projectM.dto.ProjectCreatedResponse;
+import overskam.projectM.dto.ProjectNameResponse;
 import overskam.projectM.dto.ProjectResponse;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.filter.JwtFilter;
@@ -23,6 +26,7 @@ import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
 import overskam.projectM.service.ProjectService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,6 +36,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -193,6 +198,79 @@ class ProjectControllerTest {
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.message").value("Authentication required"));
             verifyNoInteractions(projectService);
+        }
+    }
+    
+    @Nested
+    @DisplayName("Get projects")
+    class GetProjectsTest {
+        @Test
+        @DisplayName("Passes the requested paging and sorting through to the service")
+        void passesRequestedPagingParameters() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            when(projectService.getProjectsList(any(), anyInt(), anyInt(), any(), any()))
+                    .thenReturn(Page.empty());
+            
+            mockMvc.perform(get("/api/v1/projects").with(asUser(userId))
+                            .param("page", "1")
+                            .param("size", "5")
+                            .param("sortBy", "updatedAt")
+                            .param("sortDirection", "desc"))
+                    .andExpect(status().isOk());
+            
+            verify(projectService).getProjectsList(userId, 1, 5, "updatedAt", "desc");
+        }
+        
+        @Test
+        @DisplayName("Applies default paging and sorting when no query parameters are sent")
+        void appliesDefaultPagingParameters() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            when(projectService.getProjectsList(any(), anyInt(), anyInt(), any(), any()))
+                    .thenReturn(Page.empty());
+            
+            mockMvc.perform(get("/api/v1/projects").with(asUser(userId)))
+                    .andExpect(status().isOk());
+            
+            verify(projectService).getProjectsList(userId, 0, 10, "name", "asc");
+        }
+        
+        @Test
+        @DisplayName("Rejects a request with no authentication")
+        void rejectsAnonymousRequest() throws Exception {
+            mockMvc.perform(get("/api/v1/projects"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Authentication required"));
+            verifyNoInteractions(projectService);
+        }
+        
+        @Test
+        @DisplayName("Answers 400 when the page is not a number")
+        void rejectsNonNumericPage() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(get("/api/v1/projects").with(asUser(userId)).param("page", "abc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Invalid parameter"))
+                    .andExpect(jsonPath("$.data.page").value("invalid value"));
+            
+            verifyNoInteractions(projectService);
+        }
+        
+        @Test
+        @DisplayName("Returns the user's projects in the response")
+        void returnsProjectsInResponse() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            when(projectService.getProjectsList(any(), anyInt(), anyInt(), any(), any()))
+                    .thenReturn(new PageImpl<>(List.of(new ProjectNameResponse("abc123", "My Plugin"))));
+            
+            mockMvc.perform(get("/api/v1/projects").with(asUser(userId)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content[0].id").value("abc123"))
+                    .andExpect(jsonPath("$.data.content[0].name").value("My Plugin"))
+                    .andExpect(jsonPath("$.data.totalElements").value(1));
         }
     }
 }
