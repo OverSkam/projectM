@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import overskam.projectM.config.SecurityConfig;
 import overskam.projectM.dto.ProjectCreatedResponse;
+import overskam.projectM.dto.ProjectMetadataRequest;
 import overskam.projectM.dto.ProjectNameResponse;
 import overskam.projectM.dto.ProjectResponse;
 import overskam.projectM.exception.NotFoundException;
@@ -50,7 +51,7 @@ class ProjectControllerTest {
     
     @MockitoBean
     private JwtFilter jwtFilter;
-   
+    
     @BeforeEach
     void passThroughJwtFilter() throws Exception {
         doAnswer(invocation -> {
@@ -333,4 +334,128 @@ class ProjectControllerTest {
                     .andExpect(jsonPath("$.message").value("User is trying to access not his project"));
         }
     }
+    
+    @Nested
+    @DisplayName("Update project metadata")
+    class UpdateProjectMetadataTest {
+        @Test
+        @DisplayName("Answers 200 when the project is updated")
+        void returnsOkResponse() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/metadata")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "New Name"}
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message")
+                            .value("Projects metadata was updated successfully"))
+                    .andExpect(jsonPath("$.data").isEmpty());
+            
+            verify(projectService).updateProjectMetadata(userId, "abc123", new ProjectMetadataRequest("New Name"));
+        }
+        
+        @Test
+        @DisplayName("Answers 400 when the name is empty")
+        void returnsBadRequestWhenNameIsEmpty() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/metadata")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": ""}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Validation failed"))
+                    .andExpect(jsonPath("$.data.name").value("Project name must be 1-40 characters"));
+            
+            verifyNoInteractions(projectService);
+        }
+        
+        @Test
+        @DisplayName("Answers 400 when the name is too long")
+        void returnsBadRequestWhenNameIsTooLong() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/metadata")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "1234567890|1234567890|1234567890|1234567890|1234567890"}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Validation failed"))
+                    .andExpect(jsonPath("$.data.name").value("Project name must be 1-40 characters"));
+            
+            verifyNoInteractions(projectService);
+        }
+        
+        @Test
+        @DisplayName("Accepts a request that leaves the name out")
+        void acceptsRequestWithoutName() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/metadata")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Projects metadata was updated successfully"));
+            
+            verify(projectService)
+                    .updateProjectMetadata(userId, "abc123", new ProjectMetadataRequest(null));
+        }
+        
+        @Test
+        @DisplayName("Rejects a request with no authentication")
+        void rejectsAnonymousRequest() throws Exception {
+            mockMvc.perform(patch("/api/v1/projects/abc123/metadata")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "New Name"}
+                                    """))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Authentication required"));
+            verifyNoInteractions(projectService);
+        }
+        
+        @Test
+        @DisplayName("Answers 404 when the project does not exist")
+        void returnsNotFoundWhenProjectDoesNotExist() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            doThrow(new NotFoundException("Project not found")).when(projectService).updateProjectMetadata(any(), any(), any());
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/metadata")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "New Name"}
+                                    """))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Project not found"));
+        }
+        
+        @Test
+        @DisplayName("Answers 403 when the project belongs to another user")
+        void returnsForbiddenWhenUserIsNotOwner() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            doThrow(new OwnershipException("User is trying to access not his project"))
+                    .when(projectService).updateProjectMetadata(any(), any(), any());
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/metadata")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name": "New Name"}
+                                    """))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.message").value("User is trying to access not his project"));
+        }
+    }
+    
 }
