@@ -21,6 +21,7 @@ import overskam.projectM.dto.ProjectCreatedResponse;
 import overskam.projectM.dto.ProjectNameResponse;
 import overskam.projectM.dto.ProjectResponse;
 import overskam.projectM.exception.NotFoundException;
+import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.filter.JwtFilter;
 import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
@@ -33,10 +34,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,7 +50,7 @@ class ProjectControllerTest {
     
     @MockitoBean
     private JwtFilter jwtFilter;
-    
+   
     @BeforeEach
     void passThroughJwtFilter() throws Exception {
         doAnswer(invocation -> {
@@ -126,13 +124,25 @@ class ProjectControllerTest {
                     .andExpect(jsonPath("$.message").value("Authentication required"));
             verifyNoInteractions(projectService);
         }
+        
+        @Test
+        @DisplayName("Answers 403 when the project belongs to another user")
+        void returnsForbiddenWhenUserIsNotOwner() throws Exception {
+            UUID userId = UUID.randomUUID();
+            when(projectService.getProject(any(), any()))
+                    .thenThrow(new OwnershipException("User is trying to access not his project"));
+            
+            mockMvc.perform(get("/api/v1/projects/abc123").with(asUser(userId)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.message").value("User is trying to access not his project"));
+        }
     }
     
     @Nested
     @DisplayName("Create project")
     class CreateProjectTest {
         @Test
-        @DisplayName("Creates project and returns its id")
+        @DisplayName("Creates the project and returns its id")
         void returnsCreatedProjectId() throws Exception {
             UUID userId = UUID.randomUUID();
             
@@ -271,6 +281,56 @@ class ProjectControllerTest {
                     .andExpect(jsonPath("$.data.content[0].id").value("abc123"))
                     .andExpect(jsonPath("$.data.content[0].name").value("My Plugin"))
                     .andExpect(jsonPath("$.data.totalElements").value(1));
+        }
+    }
+    
+    @Nested
+    @DisplayName("Delete project")
+    class DeleteProjectTest {
+        @Test
+        @DisplayName("Answers 200 when the project is deleted")
+        void returnsOkResponse() throws Exception {
+            UUID userId = UUID.randomUUID();
+            String projectId = "abc123";
+            
+            mockMvc.perform(delete("/api/v1/projects/" + projectId).with(asUser(userId)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Project was deleted successfully"));
+            
+            verify(projectService).deleteProject(userId, projectId);
+        }
+        
+        @Test
+        @DisplayName("Rejects a request with no authentication")
+        void rejectsAnonymousRequest() throws Exception {
+            mockMvc.perform(delete("/api/v1/projects/abc123"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Authentication required"));
+            verifyNoInteractions(projectService);
+        }
+        
+        @Test
+        @DisplayName("Answers 404 when the project does not exist")
+        void returnsNotFoundWhenProjectDoesNotExist() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            doThrow(new NotFoundException("Project not found")).when(projectService).deleteProject(any(), any());
+            
+            mockMvc.perform(delete("/api/v1/projects/abc123").with(asUser(userId)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Project not found"));
+        }
+        
+        @Test
+        @DisplayName("Answers 403 when the project belongs to another user")
+        void returnsForbiddenWhenUserIsNotOwner() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            doThrow(new OwnershipException("User is trying to access not his project")).when(projectService).deleteProject(any(), any());
+            
+            mockMvc.perform(delete("/api/v1/projects/abc123").with(asUser(userId)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.message").value("User is trying to access not his project"));
         }
     }
 }
