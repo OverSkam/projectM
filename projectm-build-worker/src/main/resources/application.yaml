@@ -25,7 +25,8 @@ spring:
 
   mongodb:
     uri: ${MONGODB_URI:mongodb://projectm:projectm@localhost:27017/projectm?authSource=admin}
-    uuid-representation: standard
+    representation:
+      uuid: standard
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
