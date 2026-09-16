@@ -17,10 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import overskam.projectM.config.SecurityConfig;
-import overskam.projectM.dto.ProjectCreatedResponse;
-import overskam.projectM.dto.ProjectMetadataRequest;
-import overskam.projectM.dto.ProjectNameResponse;
-import overskam.projectM.dto.ProjectResponse;
+import overskam.projectM.dto.*;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.filter.JwtFilter;
@@ -28,9 +25,7 @@ import overskam.projectM.model.CustomUserDetails;
 import overskam.projectM.model.User;
 import overskam.projectM.service.ProjectService;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -163,7 +158,7 @@ class ProjectControllerTest {
         
         @Test
         @DisplayName("Creates the project for the authenticated user")
-        void passesAuthenticatedUserIdToService() throws Exception {
+        void passesAuthenticatedUserIdAndNameToService() throws Exception {
             UUID userId = UUID.randomUUID();
             
             when(projectService.createProject(any(), any()))
@@ -181,8 +176,8 @@ class ProjectControllerTest {
         }
         
         @Test
-        @DisplayName("Answers 400 when the passed data is invalid")
-        void returnsBadRequestWhenDataIsInvalid() throws Exception {
+        @DisplayName("Answers 400 when the name is blank")
+        void returnsBadRequestWhenNameIsBlank() throws Exception {
             UUID userId = UUID.randomUUID();
             
             mockMvc.perform(post("/api/v1/projects")
@@ -458,4 +453,101 @@ class ProjectControllerTest {
         }
     }
     
+    @Nested
+    @DisplayName("Update project data")
+    class UpdateProjectDataTest {
+        @Test
+        @DisplayName("Answers 200 when the project is updated")
+        void returnsOkResponse() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/data")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    [
+                                      { "op": "replace", "path": "/pluginName", "value": "New Name" }
+                                    ]
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Projects data was updated successfully"));
+            
+            verify(projectService).updateProjectData(
+                    userId,
+                    "abc123",
+                    List.of(op("replace", "/pluginName", "New Name"))
+            );
+        }
+        
+        @Test
+        @DisplayName("Answers 400 when the body is not a list")
+        void returnsBadRequestWhenRequestBodyIsNotList() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(patch("/api/v1/projects/abc123/data")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Malformed request body"));
+            
+            verifyNoInteractions(projectService);
+        }
+    }
+    
+    @Nested
+    @DisplayName("Replace project data")
+    class ReplaceProjectDataTest {
+        @Test
+        @DisplayName("Answers 200 when the project data is replaced")
+        void returnsOkResponse() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(put("/api/v1/projects/abc123/data")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "projectData": { "pluginName": "New name", "version": "2.0.0" }
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Projects data was updated successfully"));
+            
+            verify(projectService).replaceProjectData(
+                    userId,
+                    "abc123",
+                    new ReplaceProjectDataRequest(
+                            Map.of("pluginName", "New name",
+                                    "version", "2.0.0")
+                    )
+            );
+        }
+        
+        @Test
+        @DisplayName("Answers 400 when the project data is left out")
+        void returnsBadRequestWhenRequestBodyIsMissing() throws Exception {
+            UUID userId = UUID.randomUUID();
+            
+            mockMvc.perform(put("/api/v1/projects/abc123/data")
+                            .with(asUser(userId))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Validation failed"))
+                    .andExpect(jsonPath("$.data.projectData").value("Project data is required"));
+            
+            verifyNoInteractions(projectService);
+        }
+    }
+    
+    private static SequencedMap<String, Object> op(String op, String path, Object value) {
+        SequencedMap<String, Object> step = new LinkedHashMap<>();
+        step.put("op", op);
+        step.put("path", path);
+        if (value != null) step.put("value", value);
+        return step;
+    }
 }
