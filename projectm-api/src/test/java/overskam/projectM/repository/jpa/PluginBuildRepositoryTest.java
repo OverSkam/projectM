@@ -1,7 +1,8 @@
 package overskam.projectM.repository.jpa;
 
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -10,6 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import overskam.projectM.common.enums.BuildStatus;
 import overskam.projectM.config.JpaAuditingConfig;
 import overskam.projectM.model.PluginBuild;
 
@@ -30,14 +32,16 @@ class PluginBuildRepositoryTest {
     @Autowired
     private PluginBuildRepository pluginBuildRepository;
     
-    @Test
+    @ParameterizedTest(name = "first build {0}")
+    @EnumSource(value = BuildStatus.class, names = {"QUEUED", "RUNNING"})
     @DisplayName("Refuses a second active build for the same project")
-    void rejectsSecondActiveBuildForSameProject() {
+    void rejectsSecondActiveBuildForSameProject(BuildStatus firstStatus) {
         UUID ownerId = UUID.randomUUID();
         
         PluginBuild first = new PluginBuild();
         first.setProjectId("abc123");
         first.setOwnerId(ownerId);
+        first.setStatus(firstStatus);
         
         PluginBuild second = new PluginBuild();
         second.setProjectId("abc123");
@@ -47,5 +51,24 @@ class PluginBuildRepositoryTest {
         
         assertThrows(DataIntegrityViolationException.class,
                 () -> pluginBuildRepository.saveAndFlush(second));
+    }
+    
+    @ParameterizedTest(name = "first build {0}")
+    @EnumSource(value = BuildStatus.class, names = {"SUCCESS", "FAILED"})
+    @DisplayName("Allows a new build once the previous one has finished")
+    void allowsNewBuildWhenPreviousBuildIsFinished(BuildStatus firstStatus) {
+        UUID ownerId = UUID.randomUUID();
+        
+        PluginBuild first = new PluginBuild();
+        first.setProjectId("abc123");
+        first.setOwnerId(ownerId);
+        first.setStatus(firstStatus);
+        
+        PluginBuild second = new PluginBuild();
+        second.setProjectId("abc123");
+        second.setOwnerId(ownerId);
+        
+        assertDoesNotThrow(() -> pluginBuildRepository.saveAndFlush(first));
+        assertDoesNotThrow(() -> pluginBuildRepository.saveAndFlush(second));
     }
 }
