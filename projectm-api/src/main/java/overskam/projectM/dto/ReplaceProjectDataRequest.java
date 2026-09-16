@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Map;
 
 public record ReplaceProjectDataRequest(
-        @NotNull
+        @NotNull(message = "Project data is required")
         Map<String, Object> projectData
 ) {
 }
