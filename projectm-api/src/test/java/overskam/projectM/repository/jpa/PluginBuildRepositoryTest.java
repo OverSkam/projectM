@@ -5,12 +5,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import overskam.projectM.AbstractIntegrationTest;
 import overskam.projectM.common.enums.BuildStatus;
 import overskam.projectM.config.JpaAuditingConfig;
 import overskam.projectM.model.PluginBuild;
@@ -21,13 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
-@Testcontainers
 @Import(JpaAuditingConfig.class)
-class PluginBuildRepositoryTest {
-    
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
+class PluginBuildRepositoryTest extends AbstractIntegrationTest {
     
     @Autowired
     private PluginBuildRepository pluginBuildRepository;

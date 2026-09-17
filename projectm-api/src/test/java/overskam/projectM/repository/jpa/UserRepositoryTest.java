@@ -5,13 +5,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import overskam.projectM.AbstractIntegrationTest;
 import overskam.projectM.config.JpaAuditingConfig;
 import overskam.projectM.model.User;
 
@@ -23,12 +20,8 @@ import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DataJpaTest
-@Testcontainers
 @Import(JpaAuditingConfig.class)
-class UserRepositoryTest {
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
+class UserRepositoryTest extends AbstractIntegrationTest {
     
     @Autowired
     private UserRepository userRepository;

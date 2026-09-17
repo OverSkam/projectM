@@ -4,12 +4,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
+import overskam.projectM.AbstractIntegrationTest;
 import overskam.projectM.model.Project;
 import overskam.projectM.util.SortingUtil;
 
@@ -21,12 +18,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DataMongoTest
-@Testcontainers
-class ProjectRepositoryTest {
-    
-    @Container
-    @ServiceConnection
-    static MongoDBContainer mongo = new MongoDBContainer("mongo:7");
+class ProjectRepositoryTest extends AbstractIntegrationTest {
     
     @Autowired
     private ProjectRepository projectRepository;
