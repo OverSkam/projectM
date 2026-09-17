@@ -12,8 +12,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import overskam.projectM.model.User;
 import overskam.projectM.repository.jpa.UserRepository;
 
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = "app.jwt.secret=dGVzdC1zZWNyZXQtZm9yLXVuaXQtdGVzdHMtb25seS0zMi1ieXRlcw")
@@ -31,9 +34,30 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Logs in and uses the token to reach a protected endpoint")
     void logsInAndReachesProtectedEndpoint() throws Exception {
+        String token = createAndLogin();
+        
+        mockMvc.perform(get("/api/v1/projects").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+    
+    @Test
+    @DisplayName("Rejects the old token after logging out everywhere")
+    void rejectsOldTokenAfterLogoutAll() throws Exception {
+        String token = createAndLogin();
+        
+        mockMvc.perform(post("/api/v1/auth/logout-all").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+        
+        mockMvc.perform(get("/api/v1/projects").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Token revoked"));
+    }
+    
+    private String createAndLogin() throws Exception {
+        String email = UUID.randomUUID() + "@test.com";
         User user = new User();
         user.setPassword(passwordEncoder.encode("longPassword"));
-        user.setEmail("test@test.com");
+        user.setEmail(email);
         user.setEnabled(true);
         userRepository.save(user);
         
@@ -41,18 +65,15 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                "email": "test@test.com",
+                                "email": "%s",
                                 "password": "longPassword"
                                 }
-                                """))
+                                """.formatted(email)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         
-        String token = JsonPath.read(body, "$.data.token");
-        
-        mockMvc.perform(get("/api/v1/projects").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+        return JsonPath.read(body, "$.data.token");
     }
 }
