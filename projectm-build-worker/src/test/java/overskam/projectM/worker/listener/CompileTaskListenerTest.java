@@ -20,11 +20,11 @@ import overskam.projectM.worker.repository.jpa.PluginBuildRepository;
 import overskam.projectM.worker.repository.mongo.ProjectRepository;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest(properties = {
@@ -71,5 +71,34 @@ class CompileTaskListenerTest extends AbstractWorkerIntegrationTest {
         
         assertEquals(BuildStatus.QUEUED, pluginBuildRepository.findByProjectId(projectId).getFirst().getStatus());
         verify(projectRepository, atLeast(2)).findByIdAndOwnerId(any(), any());
+    }
+    
+    @Test
+    @DisplayName("Marks the build failed and accepts the message when the project is gone")
+    void marksBuildFailedWhenProjectIsGone() {
+        UUID ownerId = UUID.randomUUID();
+        String projectId = UUID.randomUUID().toString();
+        PluginBuild build = new PluginBuild();
+        build.setOwnerId(ownerId);
+        build.setProjectId(projectId);
+        build.setStatus(BuildStatus.QUEUED);
+        UUID buildId = pluginBuildRepository.save(build).getId();
+        
+        when(projectRepository.findByIdAndOwnerId(projectId, ownerId)).thenReturn(Optional.empty());
+        
+        rabbitTemplate.convertAndSend(
+                RabbitMqNames.COMPILE_EXCHANGE,
+                RabbitMqNames.COMPILE_REQUEST_ROUTING_KEY,
+                new CompileTaskMessage(buildId, projectId, ownerId)
+        );
+        
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            PluginBuild updated = pluginBuildRepository.findByProjectId(projectId).getFirst();
+            assertEquals(BuildStatus.FAILED, updated.getStatus());
+            assertEquals("Project no longer exists", updated.getErrorMessage());
+        });
+        
+        verify(projectRepository, times(1)).findByIdAndOwnerId(projectId, ownerId);
+        assertNull(rabbitTemplate.receiveAndConvert(RabbitMqNames.COMPILE_DLQ, 1000));
     }
 }
