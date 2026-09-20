@@ -506,7 +506,7 @@ class ProjectServiceTest {
         }
         
         @Test
-        @DisplayName("Throws IllegalArgumentException when parent path does not exist")
+        @DisplayName("Throws InvalidRequestException when parent path does not exist")
         void failsWhenParentPathDoesNotExist() {
             UUID userId = UUID.randomUUID();
             Project project = new Project();
@@ -519,7 +519,7 @@ class ProjectServiceTest {
             );
             
             when(projectRepository.findById("abc123")).thenReturn(Optional.of(project));
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(InvalidRequestException.class,
                     () -> projectService.updateProjectData(userId, "abc123", patch)
             );
             verify(projectRepository, never()).save(any(Project.class));

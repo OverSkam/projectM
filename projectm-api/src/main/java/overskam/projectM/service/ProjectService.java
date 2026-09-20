@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import overskam.projectM.common.dto.ProjectDeletedMessage;
 import overskam.projectM.dto.*;
+import overskam.projectM.exception.InvalidRequestException;
 import overskam.projectM.exception.NotFoundException;
 import overskam.projectM.exception.OwnershipException;
 import overskam.projectM.model.Project;
@@ -85,7 +86,13 @@ public class ProjectService {
         Project project = fetchOrThrow(userId, projectId);
         SequencedMap<String, Object> oldData =
                 new LinkedHashMap<>(Optional.ofNullable(project.getProjectData()).orElseGet(LinkedHashMap::new));
-        SequencedMap<String, Object> patchedData = MapDifferenceExtractor.restore(oldData, patch);
+        SequencedMap<String, Object> patchedData;
+        try {
+            patchedData = MapDifferenceExtractor.restore(oldData, patch);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid patch for project {}: {}", projectId, e.getMessage());
+            throw new InvalidRequestException("Patch could not be applied: " + e.getMessage());
+        }
         project.setProjectData(patchedData);
         projectRepository.save(project);
         log.info("Project data of project with id: {} was updated successfully", projectId);
