@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import overskam.projectM.common.enums.BuildStatus;
 import overskam.projectM.worker.AbstractWorkerIntegrationTest;
@@ -24,6 +25,9 @@ class StuckBuildReaperTest extends AbstractWorkerIntegrationTest {
     
     @Autowired
     private PluginBuildRepository pluginBuildRepository;
+    
+    @Autowired
+    private TestEntityManager testEntityManager;
     
     @Test
     @DisplayName("Fails stale running or queued builds")
@@ -51,9 +55,16 @@ class StuckBuildReaperTest extends AbstractWorkerIntegrationTest {
         build.setOwnerId(UUID.randomUUID());
         build.setProjectId(projectId);
         build.setStatus(status);
-        build.setCreateDate(LocalDateTime.now().minusMinutes(minutesAgo));
-        build.setLastModifiedDate(LocalDateTime.now().minusMinutes(minutesAgo));
-        pluginBuildRepository.save(build);
+        build.setCreateDate(LocalDateTime.now());
+        build.setLastModifiedDate(LocalDateTime.now());
+        UUID id = pluginBuildRepository.save(build).getId();
+        
+        testEntityManager.getEntityManager()
+                .createQuery("update PluginBuild b set b.lastModifiedDate = :moment where b.id = :id")
+                .setParameter("moment", LocalDateTime.now().minusMinutes(minutesAgo))
+                .setParameter("id", id)
+                .executeUpdate();
+        
         return projectId;
     }
 }
