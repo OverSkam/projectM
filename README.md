@@ -1,4 +1,5 @@
-# ProjectM
+# ProjectM 
+[![CI](https://github.com/OverSkam/projectM/actions/workflows/ci.yml/badge.svg)](https://github.com/OverSkam/projectM/actions/workflows/ci.yml)
 
 Build Minecraft plugins from visual blocks. Users assemble logic on a canvas, the backend
 compiles it into a ready-to-drop JAR.
@@ -292,9 +293,12 @@ Honest state of things rather than a roadmap.
   fail on boot against the existing index, and the two modules that map the `projects`
   collection do not declare the same set. Moving them to an explicit migration step, and
   checking rather than creating them at startup, is pending.
-- **Test coverage is thin**, and the existing tests lean on mocks in exactly the places
-  where the interesting bugs live: schema constraints, transaction boundaries, and broker
-  retry behaviour.
+- **Some paths are still untested.** Nothing runs the real `visual-core` compiler or uploads to
+  MinIO, so a compile is covered only up to the moment compilation starts. Three of the
+  listener's failure branches — malformed project data, pre-compile validation reports, and
+  the compile-exception classification — need a valid plugin document to reach, and are not
+  covered. Worker tests build their schema from the entities rather than from the Liquibase
+  migrations; the API tests cover the migrations instead.
 - **Builds are not byte-reproducible.** The Spigot API dependency is a snapshot.
 
 ---
