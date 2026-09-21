@@ -27,6 +27,11 @@ services:
       MONGO_INITDB_DATABASE: projectm
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -36,6 +41,11 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -48,6 +58,11 @@ services:
       RABBITMQ_DEFAULT_PASS: projectm
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   minio:
     image: minio/minio:latest
@@ -61,6 +76,49 @@ services:
       MINIO_ROOT_PASSWORD: projectm123
     volumes:
       - minio_data:/data
+
+  createbuckets:
+    image: minio/mc
+    depends_on: [ minio ]
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set pm http://minio:9000 projectm projectm123; do sleep 1; done;
+      mc mb --ignore-existing pm/projectm-artifacts;
+      "
+
+  api:
+    build: ./projectm-api
+    container_name: projectm-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
+      DB_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
+      MONGODB_URI: mongodb://projectm:projectm@mongo:27017/projectm?authSource=admin
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:5173
+
+  worker:
+    build: ./projectm-build-worker
+    container_name: projectm-worker
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      api: { condition: service_started }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
+      MONGODB_URI: mongodb://projectm:projectm@mongo:27017/projectm?authSource=admin
+      RABBITMQ_HOST: rabbitmq
+      S3_ENDPOINT: http://minio:9000
 
 volumes:
   postgres_data:
