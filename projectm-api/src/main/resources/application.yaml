@@ -21,6 +21,9 @@ spring:
       database: ${REDIS_DATABASE:0}
     mongodb:
       auto-index-creation: true
+    web:
+      pageable:
+        serialization-mode: via_dto
 
   jpa:
     hibernate:

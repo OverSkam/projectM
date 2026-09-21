@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -276,7 +277,7 @@ class ProjectControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.content[0].id").value("abc123"))
                     .andExpect(jsonPath("$.data.content[0].name").value("My Plugin"))
-                    .andExpect(jsonPath("$.data.totalElements").value(1));
+                    .andExpect(jsonPath("$.data.page.totalElements").value(1));
         }
     }
     
