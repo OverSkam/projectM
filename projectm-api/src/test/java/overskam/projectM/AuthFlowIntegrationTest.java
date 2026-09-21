@@ -76,4 +76,11 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
         
         return JsonPath.read(body, "$.data.token");
     }
+    
+    @Test
+    @DisplayName("Publishes health without requiring a login")
+    void publishesHealthWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(jsonPath("$.status").exists());
+    }
 }

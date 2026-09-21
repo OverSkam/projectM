@@ -104,6 +104,12 @@ services:
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
       APP_CORS_ALLOWED_ORIGINS: http://localhost:5173
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   worker:
     build: ./projectm-build-worker
@@ -113,7 +119,7 @@ services:
       postgres: { condition: service_healthy }
       mongo: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-      api: { condition: service_started }
+      api: { condition: service_healthy }
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
       MONGODB_URI: mongodb://projectm:projectm@mongo:27017/projectm?authSource=admin
