@@ -60,7 +60,7 @@ visual element model, its validation rules and the Java code generator.
 
 - **JDK 21** — a JDK, not a JRE. The worker invokes the Java compiler at runtime, so
   `ToolProvider.getSystemJavaCompiler()` must return something.
-- **Docker** with Compose, for the infrastructure.
+- **Docker** with Compose, for the infrastructure and the applications.
 - **A GitHub token with `read:packages`.** `visual-core` is published to GitHub Packages,
   which requires authentication **even though the package is public**. Without this the
   build cannot resolve its dependencies. This trips up every fresh clone.
@@ -85,30 +85,10 @@ The `github` id must match the repository id in the root `pom.xml`.
 
 ## Getting started
 
-**1. Start the infrastructure**
-
-```bash
-docker compose up -d
-```
-
-**2. Create the artifact bucket**
-
-MinIO does not create buckets on its own, and the worker does not create one either. Without
-this step a build compiles successfully and then fails on upload with `NoSuchBucketException`.
-
-```bash
-docker run --rm --network host --entrypoint sh minio/mc -c \
-  "mc alias set pm http://localhost:9000 projectm projectm123 && \
-   mc mb --ignore-existing pm/projectm-artifacts"
-```
-
-Or through the console at http://localhost:9001 (`projectm` / `projectm123`).
-
-**3. Create a `.env` file in the repository root**
+**1. Create a `.env` file in the repository root**
 
 ```properties
 JWT_TOKEN_SECRET=<see below>
-SPRING_PROFILES_ACTIVE=local
 MAILTRAP_USERNAME=<your mailtrap inbox username>
 MAILTRAP_PASSWORD=<your mailtrap inbox password>
 ```
@@ -129,28 +109,46 @@ requires a form. The client reads the `token` query parameter and calls the API 
 with the new password. Point `APP_VERIFICATION_URL` and `APP_PASSWORD_RESET_URL` at wherever
 the client is served.
 
-**4. Install the modules into the local repository**
+**2. Build the application jars**
 
 ```bash
-./mvnw install -DskipTests
+./mvnw package -DskipTests
 ```
 
-This has to happen before running anything: `projectm-api` and `projectm-build-worker` both
-depend on `projectm-common`, and Maven resolves it from the local repository.
+The images copy these jars in rather than building inside Docker, which keeps the GitHub
+Packages token out of the image build.
 
-**5. Run the two applications**
+**3. Start everything**
 
 ```bash
+docker compose up --build
+```
+
+This starts PostgreSQL, MongoDB, Redis, RabbitMQ and MinIO, creates the artifact bucket, then
+the API, and finally the worker once the API reports healthy — the API owns the Liquibase
+migrations and the worker only validates the schema.
+
+The API listens on `:8080`. Interactive API docs are at
+http://localhost:8080/swagger-ui.html, and the health endpoint is at
+http://localhost:8080/actuator/health.
+
+Stop with `docker compose down`, or `docker compose down -v` to also wipe the data.
+
+### Running from the IDE instead
+
+Start only the infrastructure, then run the two applications yourself:
+
+```bash
+docker compose up -d postgres mongo redis rabbitmq minio createbuckets
+./mvnw install -DskipTests
 ./mvnw -pl projectm-api spring-boot:run
 ./mvnw -pl projectm-build-worker spring-boot:run
 ```
 
-Note the absence of `-am`. Adding it makes Maven run the goal against `projectm-parent`,
-which is a POM-packaged aggregator with no application class, and the run fails with
-`NoClassDefFoundError: SpringApplication`. Running both from an IDE is usually easier.
-
-The API listens on `:8080`. Interactive API docs are at
-http://localhost:8080/swagger-ui.html.
+`projectm-api` and `projectm-build-worker` both depend on `projectm-common`, which Maven
+resolves from the local repository, so `install` has to happen first. Note the absence of
+`-am`: adding it makes Maven run the goal against `projectm-parent`, a POM-packaged aggregator
+with no application class, and the run fails with `NoClassDefFoundError: SpringApplication`.
 
 ---
 
