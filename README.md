@@ -224,7 +224,7 @@ DELETE /projects/{id}
 GET    /projects/{id}/builds                    paged build history
 POST   /projects/{id}/compile                   queue a compile
 GET    /projects/{id}/builds/{buildId}          one build
-GET    /projects/{id}/builds/{buildId}/artifact the artifact's storage key
+GET    /projects/{id}/builds/{buildId}/artifact temporary signed link to download the JAR
 ```
 
 ---
@@ -275,7 +275,7 @@ than overwritten, since overwriting would require a read-back and reintroduce th
 
 Honest state of things rather than a roadmap.
 
-- **The artifact endpoint returns a storage key, not the file.** There is no presigned-URL
+- **The endpoint returns a temporary signed link, valid for 10 minutes, and the browser downloads straight from storage.** There is no presigned-URL
   endpoint and the API does not stream bytes, so a browser cannot download a JAR without
   reaching MinIO directly.
 - **Newly created projects hold a placeholder document** that the compiler rejects. A client

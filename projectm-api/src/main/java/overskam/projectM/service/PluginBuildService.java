@@ -1,7 +1,8 @@
 package overskam.projectM.service;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -21,19 +22,30 @@ import overskam.projectM.model.PluginBuild;
 import overskam.projectM.repository.jpa.PluginBuildRepository;
 import overskam.projectM.repository.mongo.ProjectRepository;
 import overskam.projectM.util.SortingUtil;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
 @Slf4j
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class PluginBuildService {
     private final BuildQueuePublisher buildQueuePublisher;
     private final ProjectRepository projectRepository;
     private final PluginBuildRepository buildRepository;
+    private final S3Presigner presigner;
     
     private static final int MAX_PAGE_SIZE = 100;
+    
+    @Value("${app.storage.bucket}")
+    private String bucket;
+    
+    @Value("${app.storage.link-ttl-minutes}")
+    private long linkTtlMinutes;
     
     public Page<BuildResponse> getBuilds(UUID userId, String projectId, int page, int size, String sortBy, String sortDirection) {
         Sort sort = SortingUtil.forBuilds(sortBy, sortDirection);
@@ -92,8 +104,19 @@ public class PluginBuildService {
             throw new InvalidRequestException("Invalid project id");
         if (!build.getOwnerId().equals(userId))
             throw new OwnershipException("User doesn't have access to this build");
+        if (!build.getStatus().equals(BuildStatus.SUCCESS))
+            throw new NotFoundException("Artifact is available only for successful builds");
         
-        return new ArtifactResponse(build.getArtifactKey());
+        GetObjectRequest getObject = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(build.getArtifactKey())
+                .build();
+        
+        PresignedGetObjectRequest presigned = presigner.presignGetObject(request -> request
+                .signatureDuration(Duration.ofMinutes(linkTtlMinutes))
+                .getObjectRequest(getObject));
+        
+        return new ArtifactResponse(presigned.url().toString(), linkTtlMinutes * 60);
     }
     
     private PluginBuild fetchOrThrow(UUID userId, String projectId, UUID buildId) {

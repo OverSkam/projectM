@@ -1,6 +1,6 @@
 package overskam.projectM.dto;
 
 public record ArtifactResponse (
-        String artifactKey
+        String url, long expiresInSeconds
 ) {
 }
