@@ -8,6 +8,8 @@ SVALKA.md
 CONTEXT.md
 CLAUDE.md
 .env
+mc-compose.yml
+mc-data
 
 ### STS ###
 .apt_generated

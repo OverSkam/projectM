@@ -68,7 +68,7 @@ public class CompileTaskListener {
         byte[] jar;
         try {
             jar = pluginCompiler.compilePlugin(plugin, project.getName(), "1.0.0", "ProjectM");
-        } catch (DataValidationException | InvalidSourcesException e) {
+        } catch (DataValidationException | InvalidSourcesException | IllegalArgumentException e) {
             log.error("Compile failed build: {}, projectId: {}", message.buildId(), project.getId(), e);
             pluginBuildService.markFailed(message.buildId(), e.getMessage());
             return;

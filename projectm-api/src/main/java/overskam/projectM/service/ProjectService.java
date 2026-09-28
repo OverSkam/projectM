@@ -63,11 +63,10 @@ public class ProjectService {
         project.setName(projectName);
         
         Map<String, Object> defaultProjectData = new LinkedHashMap<>();
-        defaultProjectData.put("pluginName", projectName);
-        defaultProjectData.put("version", "1.0.0");
-        defaultProjectData.put("author", "ProjectM");
-        defaultProjectData.put("modules", List.of());
-        defaultProjectData.put("variables", new LinkedHashMap<>());
+        defaultProjectData.put("type", "plugin");
+        defaultProjectData.put("commandModules", Map.of());
+        defaultProjectData.put("functionModules", Map.of());
+        defaultProjectData.put("eventModules", Map.of());
         project.setProjectData(defaultProjectData);
         
         projectRepository.save(project);
