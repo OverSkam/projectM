@@ -1,0 +1,123 @@
+# Production stack. Artifacts go to Cloudflare R2, databases are not
+# published, every secret comes from .env.
+# Run with: docker compose -f docker-compose.prod.yaml up -d --build
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: projectm
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set it in .env}
+      MONGO_INITDB_DATABASE: projectm
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: projectm
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set it in .env}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./projectm-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET:?set it in .env}
+      DB_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
+      MONGODB_URI: mongodb://projectm:${MONGO_PASSWORD:?set it in .env}@mongo:27017/projectm?authSource=admin
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set it in .env}
+      S3_PUBLIC_ENDPOINT: ${S3_ENDPOINT:?set it in .env}
+      S3_REGION: auto
+      S3_BUCKET: ${S3_BUCKET:-projectm-artifacts}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set it in .env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set it in .env}
+      MAILTRAP_USERNAME: ${MAILTRAP_USERNAME:-}
+      MAILTRAP_PASSWORD: ${MAILTRAP_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      APP_VERIFICATION_URL: ${APP_VERIFICATION_URL:-http://localhost:5173/verify}
+      APP_PASSWORD_RESET_URL: ${APP_PASSWORD_RESET_URL:-http://localhost:5173/reset-password}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  worker:
+    build: ./projectm-build-worker
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      api: { condition: service_healthy }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
+      MONGODB_URI: mongodb://projectm:${MONGO_PASSWORD:?set it in .env}@mongo:27017/projectm?authSource=admin
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set it in .env}
+      S3_ENDPOINT: ${S3_ENDPOINT:?set it in .env}
+      S3_REGION: auto
+      S3_BUCKET: ${S3_BUCKET:-projectm-artifacts}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set it in .env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set it in .env}
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  rabbitmq_data:
