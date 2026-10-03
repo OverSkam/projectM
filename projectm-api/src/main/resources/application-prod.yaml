@@ -13,6 +13,6 @@ spring:
 
 app:
   mail:
-    from: ${APP_MAIL_FROM:ProjectM <noreply@your-domain.com>}
+    from: ${APP_MAIL_FROM:MCDaedalus <noreply@your-domain.com>}
     verification-url: ${APP_VERIFICATION_URL:https://your-domain.com/verify}
     password-reset-url: ${APP_PASSWORD_RESET_URL:https://your-domain.com/reset-password}
