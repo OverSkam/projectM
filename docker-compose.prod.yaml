@@ -90,6 +90,8 @@ services:
       APP_VERIFICATION_URL: ${APP_VERIFICATION_URL:-http://localhost:5173/verify}
       APP_PASSWORD_RESET_URL: ${APP_PASSWORD_RESET_URL:-http://localhost:5173/reset-password}
       SERVER_FORWARD_HEADERS_STRATEGY: native
+      SPRINGDOC_API_DOCS_ENABLED: "false"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "false"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 10s
