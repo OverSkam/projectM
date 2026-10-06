@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.containers.GenericContainer;
 import overskam.projectM.common.enums.BuildStatus;
 import overskam.projectM.dto.ArtifactResponse;
 import overskam.projectM.exception.NotFoundException;
@@ -31,17 +31,27 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(properties = "app.jwt.secret=dGVzdC1zZWNyZXQtZm9yLXVuaXQtdGVzdHMtb25seS0zMi1ieXRlcw")
 class ArtifactDownloadIntegrationTest extends AbstractIntegrationTest {
     
-    static final MinIOContainer minio = new MinIOContainer("minio/minio:latest");
+    private static final String BUCKET = "projectm-artifacts";
+    private static final String ACCESS_KEY = "test";
+    private static final String SECRET_KEY = "test";
+    
+    static final GenericContainer<?> s3mock = new GenericContainer<>("adobe/s3mock:latest")
+            .withExposedPorts(9090)
+            .withEnv("initialBuckets", BUCKET);
     
     static {
-        minio.start();
+        s3mock.start();
+    }
+    
+    private static String endpoint() {
+        return "http://" + s3mock.getHost() + ":" + s3mock.getMappedPort(9090);
     }
     
     @DynamicPropertySource
     static void storageProperties(DynamicPropertyRegistry registry) {
-        registry.add("app.storage.public-endpoint", minio::getS3URL);
-        registry.add("app.storage.access-key", minio::getUserName);
-        registry.add("app.storage.secret-key", minio::getPassword);
+        registry.add("app.storage.public-endpoint", ArtifactDownloadIntegrationTest::endpoint);
+        registry.add("app.storage.access-key", () -> ACCESS_KEY);
+        registry.add("app.storage.secret-key", () -> SECRET_KEY);
     }
     
     @Autowired
@@ -93,10 +103,10 @@ class ArtifactDownloadIntegrationTest extends AbstractIntegrationTest {
     
     private void uploadArtifact() {
         S3Client s3 = S3Client.builder()
-                .endpointOverride(URI.create(minio.getS3URL()))
+                .endpointOverride(URI.create(endpoint()))
                 .region(Region.US_EAST_1)
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(minio.getUserName(), minio.getPassword())))
+                        AwsBasicCredentials.create(ACCESS_KEY, SECRET_KEY)))
                 .forcePathStyle(true)
                 .build();
         

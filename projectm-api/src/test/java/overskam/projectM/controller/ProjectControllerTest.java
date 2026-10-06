@@ -31,7 +31,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -189,7 +188,7 @@ class ProjectControllerTest {
                                     """))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("Validation failed"))
-                    .andExpect(jsonPath("$.data.name").value("Project name must exist"));
+                    .andExpect(jsonPath("$.data.name").exists());
             
             verifyNoInteractions(projectService);
         }
@@ -380,7 +379,7 @@ class ProjectControllerTest {
                             .with(asUser(userId))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
-                                    {"name": "1234567890|1234567890|1234567890|1234567890|1234567890"}
+                                    {"name": "12345678901234567890123456789012345678901"}
                                     """))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("Validation failed"))

@@ -275,13 +275,11 @@ class ProjectServiceTest {
             Project saved = captor.getValue();
             assertEquals(userId, saved.getOwnerId());
             assertEquals(projectName, saved.getName());
-            assertEquals(
-                    Map.of("pluginName", projectName,
-                            "version", "1.0.0",
-                            "author", "ProjectM",
-                            "modules", List.of(),
-                            "variables", Map.of()),
-                    saved.getProjectData());
+            Map<String, Object> data = saved.getProjectData();
+            assertEquals("plugin", data.get("type"));
+            assertEquals(Map.of(), data.get("commandModules"));
+            assertEquals(Map.of(), data.get("functionModules"));
+            assertEquals(Map.of(), data.get("eventModules"));
         }
         
         @Test

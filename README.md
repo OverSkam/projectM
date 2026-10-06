@@ -7,6 +7,10 @@ compiles it into a ready-to-drop JAR.
 This repository is the backend: a Spring Boot multi-module reactor with an HTTP API and a
 separate compile worker. The web client lives in its own repository.
 
+**Live at [www.mcdaedalus.com](https://www.mcdaedalus.com)**, API at `https://api.mcdaedalus.com`.
+Registration sends a real verification email, so sign up with an address you can read; from an
+empty account to a downloaded JAR takes about a minute.
+
 ---
 
 ## Architecture
@@ -26,7 +30,7 @@ Storage is split by what each store is good at:
 | PostgreSQL | `users`, `verification_tokens`, `plugin_builds` — anything relational or transactional |
 | MongoDB | Projects and their visual document (`projectData`), which is deeply nested and schemaless |
 | Redis | `tokenVersion` cache, so JWT validation does not hit Postgres on every request |
-| MinIO (S3) | Compiled JAR artifacts |
+| Object storage (S3 API) | Compiled JAR artifacts — MinIO in development, Cloudflare R2 in production |
 | RabbitMQ | Compile queue and cleanup queue, both with a dead-letter exchange |
 
 ### Compile flow
@@ -37,7 +41,7 @@ POST /compile
         └─ CompileTaskMessage published after the transaction commits
              └─ worker atomically claims the build (QUEUED → RUNNING)
                   └─ loads the project from Mongo, validates and compiles it
-                       └─ uploads the JAR to MinIO
+                       └─ uploads the JAR to object storage
                             └─ status SUCCESS (or FAILED with the reason)
 ```
 
@@ -166,6 +170,7 @@ environment variables or `.env`.
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` / `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | `localhost` / `5672` / `projectm` / `projectm` | RabbitMQ |
 | `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `http://localhost:9000` / `projectm-artifacts` / `projectm` / `projectm123` | Artifact storage (worker) |
+| `S3_PUBLIC_ENDPOINT` / `S3_REGION` / `S3_LINK_TTL_MINUTES` | `http://localhost:9000` / `us-east-1` / `10` | Artifact storage (API) — the public endpoint must be the address the *browser* resolves, since it ends up inside the signed download link |
 | `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Allowed browser origins |
 | `APP_VERIFICATION_URL` | `http://localhost:5173/verify` | Frontend page the verification email links to |
 | `APP_PASSWORD_RESET_URL` | `http://localhost:5173/reset-password` | Frontend page the password reset email links to |
@@ -188,6 +193,31 @@ overridden everywhere else.
 
 The relational schema is owned by Liquibase (`projectm-api/src/main/resources/db/changelog`)
 and Hibernate runs with `ddl-auto: validate`, so the schema is never modified by the ORM.
+
+---
+
+## Deployment
+
+The live instance runs this same stack on one Ubuntu VM in Google Cloud, through
+`docker-compose.prod.yaml`.
+
+- **The jars are built on the machine** and the images only copy them in, which keeps the
+  GitHub Packages token out of every image layer.
+- **The production compose file differs in three ways**: no object-storage container, because
+  artifacts go to Cloudflare R2; no published database ports; and the API bound to
+  `127.0.0.1:8080` rather than to every interface.
+- **No inbound port is open at all.** A Cloudflare Tunnel runs as a systemd service and dials
+  outward, so `https://api.mcdaedalus.com` terminates TLS at Cloudflare and reaches the API over
+  the loopback interface. The VM's public IP answers nothing.
+- **R2 speaks the S3 API**, so the same presigner code serves download links in both
+  environments — only the endpoint and the region differ.
+- **Mail goes through Resend** on the `prod` profile, DKIM-signed for the domain.
+- **The web client is a static build on Vercel**, which is why the API has to allow its origin
+  through `APP_CORS_ALLOWED_ORIGINS`, and why the email links point at the client rather than at
+  the API.
+
+Swagger and the OpenAPI document are disabled in production, so the route list below is the
+reference.
 
 ---
 
@@ -263,6 +293,13 @@ has exhausted its retries and gone to the dead-letter queue. Since the partial u
 counts `QUEUED` rows, such a row would block that project forever, so a scheduled job fails
 rows that have sat too long.
 
+**The JAR is handed over as a signed link, not as bytes.** The artifact endpoint answers with
+a presigned URL, valid for ten minutes, and the browser fetches the object straight from
+storage. Streaming it through the API would occupy a request thread and heap for the length of
+the download, and the signature keeps the bucket private without the API proxying traffic it
+contributes nothing to. The link has to be opened by the browser itself — a client that sends
+it through its own HTTP layer, `Authorization` header and all, gets rejected by the signature.
+
 **Sessions are revoked through a version counter.** Each user row carries a `tokenVersion`
 embedded in every issued token and cached in Redis. Logging out everywhere, and resetting a
 password, increment it — invalidating every outstanding token without any server-side
@@ -275,9 +312,6 @@ than overwritten, since overwriting would require a read-back and reintroduce th
 
 Honest state of things rather than a roadmap.
 
-- **The endpoint returns a temporary signed link, valid for 10 minutes, and the browser downloads straight from storage.** There is no presigned-URL
-  endpoint and the API does not stream bytes, so a browser cannot download a JAR without
-  reaching MinIO directly.
 - **Newly created projects hold a placeholder document** that the compiler rejects. A client
   has to write a valid empty plugin before the project can build.
 - **Access tokens only.** Tokens are long-lived and there is no refresh endpoint or
@@ -298,6 +332,8 @@ Honest state of things rather than a roadmap.
   covered. Worker tests build their schema from the entities rather than from the Liquibase
   migrations; the API tests cover the migrations instead.
 - **Builds are not byte-reproducible.** The Spigot API dependency is a snapshot.
+- **The AWS SDK is pinned to 2.29.52.** From 2.30 the S3 client sends integrity headers that
+  Cloudflare R2 rejects unless checksum calculation is configured down to `WHEN_REQUIRED`.
 
 ---
 
@@ -309,5 +345,6 @@ projectm-api/            REST API
   src/main/resources/db/changelog/   Liquibase migrations
 projectm-build-worker/   compile worker
   libs/                  runtime jar bundled into compiled plugins
-docker-compose.yaml      local infrastructure
+docker-compose.yaml      local infrastructure and both applications
+docker-compose.prod.yaml production stack: no object-storage container, no exposed databases
 ```
