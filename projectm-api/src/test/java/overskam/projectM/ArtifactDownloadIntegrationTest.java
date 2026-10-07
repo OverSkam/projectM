@@ -37,7 +37,7 @@ class ArtifactDownloadIntegrationTest extends AbstractIntegrationTest {
     
     static final GenericContainer<?> s3mock = new GenericContainer<>("adobe/s3mock:latest")
             .withExposedPorts(9090)
-            .withEnv("initialBuckets", BUCKET);
+            .withEnv("COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS", BUCKET);
     
     static {
         s3mock.start();

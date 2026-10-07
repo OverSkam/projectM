@@ -64,27 +64,13 @@ services:
       timeout: 5s
       retries: 10
 
-  minio:
-    image: minio/minio:latest
-    container_name: projectm-minio
-    command: server /data --console-address ":9001"
+  s3mock:
+    image: adobe/s3mock:latest
+    container_name: projectm-s3mock
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9090"
     environment:
-      MINIO_ROOT_USER: projectm
-      MINIO_ROOT_PASSWORD: projectm123
-    volumes:
-      - minio_data:/data
-
-  createbuckets:
-    image: minio/mc
-    depends_on: [ minio ]
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set pm http://minio:9000 projectm projectm123; do sleep 1; done;
-      mc mb --ignore-existing pm/projectm-artifacts;
-      "
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: projectm-artifacts
 
   api:
     build: ./projectm-api
@@ -127,11 +113,10 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
       MONGODB_URI: mongodb://projectm:projectm@mongo:27017/projectm?authSource=admin
       RABBITMQ_HOST: rabbitmq
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: http://s3mock:9090
 
 volumes:
   postgres_data:
   mongo_data:
   redis_data:
   rabbitmq_data:
-  minio_data:
