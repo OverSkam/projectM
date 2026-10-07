@@ -312,8 +312,6 @@ than overwritten, since overwriting would require a read-back and reintroduce th
 
 Honest state of things rather than a roadmap.
 
-- **Newly created projects hold a placeholder document** that the compiler rejects. A client
-  has to write a valid empty plugin before the project can build.
 - **Access tokens only.** Tokens are long-lived and there is no refresh endpoint or
   per-device session record, so the only revocation available is all-or-nothing.
 - **Login distinguishes an unverified account from a wrong password** — 403 versus 401 —
