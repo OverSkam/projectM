@@ -27,6 +27,8 @@ import overskam.projectM.service.ProjectService;
 
 import java.util.*;
 
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -188,7 +190,9 @@ class ProjectControllerTest {
                                     """))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("Validation failed"))
-                    .andExpect(jsonPath("$.data.name").exists());
+                    .andExpect(jsonPath("$.data.name", anyOf(
+                            is("Project name must exist"),
+                            is("Project name may contain only letters, digits, spaces, dots, hyphens and underscores"))));
             
             verifyNoInteractions(projectService);
         }
@@ -365,7 +369,9 @@ class ProjectControllerTest {
                                     """))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("Validation failed"))
-                    .andExpect(jsonPath("$.data.name").value("Project name must be 1-40 characters"));
+                    .andExpect(jsonPath("$.data.name", anyOf(
+                            is("Project name must be 1-40 characters"),
+                            is("Project name may contain only letters, digits, spaces, dots, hyphens and underscores"))));
             
             verifyNoInteractions(projectService);
         }
